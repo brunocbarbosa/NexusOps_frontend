@@ -1,0 +1,12 @@
+# Python — artefatos dos scripts das skills em .claude/
+__pycache__/
+*.py[cod]
+.venv*/
+
+# Ambiente
+.env
+.env.local
+
+# SO
+.DS_Store
+Thumbs.db
