@@ -30,8 +30,11 @@ Uma tarefa só é marcada depois da verificação passar — não depois do coma
 - [x] `sonar-project.properties` sem `organization`/`projectKey` (vêm das variables)
 - [x] **Verificar:** `actionlint` limpo
 - [x] Commit
-- [ ] **Verificar na CI:** os cinco jobs verdes num PR real
-- [ ] **Verificar na CI:** `branch-policy` reprova um PR de teste direto para `main`
+- [!] **Verificar na CI:** PR #1 — `branch-policy`, `commits`, `quality` e `e2e` verdes.
+      `sonar` fica *skipping* até o secret e as variables existirem neste repositório (ver Passos
+      manuais no GitHub).
+- [x] **Verificar na CI:** PR #2 (rascunho, aberto e fechado) — `branch-policy` reprovou com
+      `main so recebe PR vindo de development (este veio de 'ci/pipeline-cicd-security')`
 
 ## Camada 3 — Segurança
 
@@ -45,7 +48,8 @@ Uma tarefa só é marcada depois da verificação passar — não depois do coma
 - [x] **Verificar:** `actionlint` limpo
 - [x] **Verificar:** `npm audit` nas duas passadas → 0 vulnerabilidades
 - [x] Commit
-- [ ] **Verificar na CI:** os quatro jobs verdes num PR real
+- [!] **Verificar na CI:** PR #1 — `codeql`, `audit` e `secrets` verdes.
+      `dependency-review` falha até o Dependency graph ser ligado (ver Passos manuais no GitHub).
 
 ## Camada 4 — Docker e release
 
