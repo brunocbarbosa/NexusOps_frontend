@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Leia também [`AGENTS.md`](./AGENTS.md): o Next.js 16 o mantém automaticamente (o bloco é reescrito a
+cada `next dev`) e ele avisa que esta versão tem *breaking changes* em relação ao conhecimento
+pré-treinado dos agentes, apontando a documentação real em `node_modules/next/dist/docs/`. Consulte
+essa pasta antes de escrever código de Next, em vez de confiar na memória.
+
 ## Estado do repositório
 
 O repositório ainda **não tem código**: apenas `LICENSE`, `README.md` e `documents/`. Não existe

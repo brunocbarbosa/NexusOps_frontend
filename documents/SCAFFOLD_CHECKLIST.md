@@ -10,10 +10,10 @@ depois do comando rodar.
 
 ## Camada 1 — Base Next.js
 
-- [ ] `create-next-app` com TypeScript, App Router, `src/`, alias `@/*`, Tailwind
-- [ ] `output: 'standalone'` em `next.config.ts`
-- [ ] **Verificar:** `npm run dev` sobe sem erro
-- [ ] **Verificar:** `npm run build` gera `.next/standalone`
+- [x] `create-next-app` com TypeScript, App Router, `src/`, alias `@/*`, Tailwind
+- [x] `output: 'standalone'` em `next.config.ts`
+- [x] **Verificar:** `npm run dev` sobe sem erro
+- [x] **Verificar:** `npm run build` gera `.next/standalone`
 - [ ] Commit
 
 ## Camada 2 — TypeScript e lint
