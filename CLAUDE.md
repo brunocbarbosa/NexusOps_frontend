@@ -45,16 +45,19 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
 - **O `sonarqube-scan-action` sai com 0 mesmo quando o Quality Gate reprova** — ele só envia o
   relatório. Quem reprova é o passo `sonarqube-quality-gate-action` logo depois. Remover esse passo
   deixa o gate verde para sempre.
-- **O SonarCloud desta organização só analisa a branch principal e os PRs.** Medido: a leitura do
-  Quality Gate com `branch=development` responde **403** com
-  `Organization is not allowed to access data from non main branches`, enquanto `branch=main` e
-  `pullRequest=N` respondem 200. Por isso o job `sonar` só roda em PR e no push de `main` — analisar
-  `development` geraria um scan ilegível e um gate que nunca passa. Nada se perde: o commit que
-  chega em `development` é o mesmo que já passou pelo gate no PR.
+- **O SonarCloud desta organização só dá acesso à branch principal.** Duas consequências, ambas
+  medidas, e as duas chegam como o mesmo `curl: (22) The requested URL returned error: 403` no passo
+  do Quality Gate — com o scan tendo passado. Só o corpo da resposta diz qual é qual:
 
-  O erro engana: chega como `curl: (22) The requested URL returned error: 403` no passo do gate,
-  com o scan tendo passado. **Não é tipo de branch** — reclassificar `development` de `SHORT` para
-  `LONG` não muda nada. Só o corpo da resposta diz a verdade.
+  1. `Organization is not allowed to access data from non main branches` → por isso o job `sonar`
+     roda em PR e no push de `main`, nunca no push de `development`.
+  2. `Organization is not allowed to access data from PR targeting non main branches` → por isso
+     todo PR força `-Dsonar.pullrequest.base=main`, mesmo mirando `development`.
+
+  **Não é tipo de branch.** Reclassificar `development` de `SHORT` para `LONG` não mudou nada. E não
+  confie em PR antigo que passou: os PRs #1 e #3 passaram porque `development` ainda não existia no
+  SonarCloud e o scanner caiu de volta para `main` sozinho. Assim que uma análise recriou a branch
+  lá, o mesmo PR passou a dar 403.
 - **`fetch-depth: 0` nos jobs `sonar` e `secrets` não é otimização.** Sem o histórico completo o
   Sonar não data as linhas e mede "New Code" errado, e o gitleaks não enxerga o commit onde o
   segredo realmente entrou.

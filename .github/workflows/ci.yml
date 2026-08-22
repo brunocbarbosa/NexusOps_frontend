@@ -192,6 +192,20 @@ jobs:
 
       # Organização e chave vêm das variables do repositório, não do
       # sonar-project.properties: um fork roda sem editar arquivo nenhum.
+      #
+      # `sonar.pullrequest.base=main` é imposto em todo PR, inclusive nos que
+      # miram `development`. O plano da organização recusa a leitura do gate de
+      # um PR cujo alvo não seja a branch principal:
+      #   Organization is not allowed to access data from PR targeting non main branches
+      # Os PRs #1 e #3 passaram por acidente — `development` ainda não existia
+      # no SonarCloud e o scanner caiu de volta para `main` sozinho. Depender
+      # disso é depender de uma branch continuar não existindo. Declarar a base
+      # torna o comportamento uma decisão, não um efeito colateral.
+      #
+      # Não distorce a medição: o conjunto de arquivos do PR vem do diff que o
+      # GitHub reporta, não da base declarada — medido no #1, que reportou
+      # ncloc=4 (só o arquivo que ele acrescentou) tendo `main` como base
+      # registrada, com `development` já bem à frente de `main`.
       - name: SonarQube Cloud scan
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         env:
@@ -200,6 +214,7 @@ jobs:
           args: >
             -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
             -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            ${{ github.event_name == 'pull_request' && '-Dsonar.pullrequest.base=main' || '' }}
 
       # O scan apenas envia o relatório; quem reprova é o Quality Gate. Sem
       # este passo o job fica verde mesmo com o gate vermelho, e o bloqueio
