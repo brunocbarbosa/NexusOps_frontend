@@ -11,6 +11,17 @@ Consequência prática: **não há comandos de build, lint ou teste para rodar h
 scaffold do Next.js existir, esta seção deve ser substituída pelos comandos reais (incluindo como
 rodar um único teste).
 
+## Fluxo de branches
+
+**`development` é a branch principal de trabalho.** Todo trabalho passa por ela.
+
+- Parta de `development` para qualquer feature ou correção — nunca de `main`.
+- **`main` só recebe código vindo de `development`**, nunca commits diretos e nunca merge de uma
+  branch de feature. `main` é a linha de release.
+- O `.claude/` é versionado neste repositório: skills e agents foram ajustados à stack decidida aqui,
+  então reinstalá-los via `npx claude-code-templates` sobrescreve as customizações. Veja o commit
+  `f3a3938` para o que foi removido e por quê.
+
 ## Documentos de referência
 
 | Arquivo                                                                  | Leia antes de                                                     |
