@@ -202,6 +202,11 @@ jobs:
       # disso é depender de uma branch continuar não existindo. Declarar a base
       # torna o comportamento uma decisão, não um efeito colateral.
       #
+      # Os três parâmetros do PR vão juntos por obrigação, não por gosto:
+      # informar `base` desliga a auto-configuração da action, e o scanner
+      # passa a morrer com
+      #   Parameter 'sonar.pullrequest.key' is mandatory for a pull request analysis
+      #
       # Não distorce a medição: o conjunto de arquivos do PR vem do diff que o
       # GitHub reporta, não da base declarada — medido no #1, que reportou
       # ncloc=4 (só o arquivo que ele acrescentou) tendo `main` como base
@@ -214,7 +219,7 @@ jobs:
           args: >
             -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
             -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
-            ${{ github.event_name == 'pull_request' && '-Dsonar.pullrequest.base=main' || '' }}
+            ${{ github.event_name == 'pull_request' && format('-Dsonar.pullrequest.key={0} -Dsonar.pullrequest.branch={1} -Dsonar.pullrequest.base=main', github.event.pull_request.number, github.head_ref) || '' }}
 
       # O scan apenas envia o relatório; quem reprova é o Quality Gate. Sem
       # este passo o job fica verde mesmo com o gate vermelho, e o bloqueio
