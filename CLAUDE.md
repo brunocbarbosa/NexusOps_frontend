@@ -45,6 +45,12 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
 - **O `sonarqube-scan-action` sai com 0 mesmo quando o Quality Gate reprova** — ele só envia o
   relatório. Quem reprova é o passo `sonarqube-quality-gate-action` logo depois. Remover esse passo
   deixa o gate verde para sempre.
+- **O SonarCloud precisa saber que `development` é branch de vida longa.** O padrão default da
+  instância é `(branch|release)-.*`, que `development` não casa: o scan a classifica como `SHORT`,
+  e branch curta não tem Quality Gate para consultar — o passo do gate morre com
+  `curl: (22) The requested URL returned error: 403`, que não se parece nada com a causa. O padrão
+  fica em *Administration → Branches & Pull Requests* do projeto. Trocar o padrão não reclassifica
+  a branch já analisada: é preciso apagá-la no SonarCloud e reanalisar.
 - **`fetch-depth: 0` nos jobs `sonar` e `secrets` não é otimização.** Sem o histórico completo o
   Sonar não data as linhas e mede "New Code" errado, e o gitleaks não enxerga o commit onde o
   segredo realmente entrou.
