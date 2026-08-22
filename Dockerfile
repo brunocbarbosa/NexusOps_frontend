@@ -18,7 +18,12 @@ FROM node:${NODE_VERSION}-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# `--ignore-scripts` fecha o caminho mais curto de um comprometimento de cadeia
+# de suprimentos: um `postinstall` de dependência transitiva rodando com a rede
+# e o sistema de arquivos do build. Verificado que lint, typecheck, testes e
+# build passam sem os scripts — o único pacote da árvore que tem `postinstall`
+# é o `unrs-resolver`, e o ESLint funciona sem ele.
+RUN npm ci --ignore-scripts
 
 # ---------------------------------------------------------------------------
 # builder — roda o next build

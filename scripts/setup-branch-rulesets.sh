@@ -17,7 +17,7 @@ set -euo pipefail
 
 REPO="${REPO:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 APPLY=false
-[ "${1:-}" = "--apply" ] && APPLY=true
+[[ "${1:-}" == "--apply" ]] && APPLY=true
 
 # Checks obrigatórios. São os `name:` dos jobs em .github/workflows/, não os
 # ids — o GitHub identifica o status check pelo nome exibido.
@@ -91,8 +91,8 @@ upsert() {
 
   id="$(gh api "repos/$REPO/rulesets" --jq ".[] | select(.name==\"$name\") | .id" 2>/dev/null || true)"
 
-  if [ "$APPLY" != true ]; then
-    if [ -n "$id" ]; then
+  if [[ "$APPLY" != true ]]; then
+    if [[ -n "$id" ]]; then
       echo ">> ATUALIZARIA o ruleset '$name' (id $id) em $REPO"
     else
       echo ">> CRIARIA o ruleset '$name' em $REPO"
@@ -102,7 +102,7 @@ upsert() {
     return
   fi
 
-  if [ -n "$id" ]; then
+  if [[ -n "$id" ]]; then
     echo ">> atualizando ruleset '$name' (id $id)"
     printf '%s' "$payload" | gh api --method PUT "repos/$REPO/rulesets/$id" --input - >/dev/null
   else

@@ -16,9 +16,6 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
   # A política do CLAUDE.md em código executável: `main` é linha de release e
   # só recebe `development`. Ruleset do GitHub restringe QUEM faz merge e QUAIS
@@ -27,6 +24,10 @@ jobs:
   branch-policy:
     name: branch-policy
     if: github.event_name == 'pull_request'
+    # Permissão no job, não no workflow: o escopo default de um job
+    # herdado do topo é maior do que o que ele precisa.
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Check base and head branches
@@ -51,6 +52,10 @@ jobs:
   commits:
     name: commits
     if: github.event_name == 'pull_request'
+    # Permissão no job, não no workflow: o escopo default de um job
+    # herdado do topo é maior do que o que ele precisa.
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -61,14 +66,18 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - name: Lint commit messages
-        uses: wagoid/commitlint-github-action@v6
+        uses: wagoid/commitlint-github-action@b948419dd99f3fd78a6548d48f94e3df7f6bf3ed # v6.2.1
         with:
           configFile: commitlint.config.mjs
 
   quality:
     name: quality
+    # Permissão no job, não no workflow: o escopo default de um job
+    # herdado do topo é maior do que o que ele precisa.
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -76,7 +85,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - name: Lint
         run: npm run lint
@@ -98,6 +107,10 @@ jobs:
 
   e2e:
     name: e2e
+    # Permissão no job, não no workflow: o escopo default de um job
+    # herdado do topo é maior do que o que ele precisa.
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -105,15 +118,17 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       # Passo próprio, e não parte do teste: assim uma falha de build se
       # apresenta como falha de build, e não disfarçada de teste vermelho.
       - name: Build
         run: npm run build
 
+      # `npm exec --no` falha em vez de baixar da rede: o Playwright já é
+      # devDependency, e a versão do browser precisa casar com a do pacote.
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        run: npm exec --no -- playwright install --with-deps chromium
 
       # playwright.config.ts sobe o artefato standalone por conta própria
       # (webServer), na porta 3100.
@@ -141,6 +156,10 @@ jobs:
       vars.SONAR_ENABLED == 'true' &&
       (github.event_name != 'pull_request' ||
        github.event.pull_request.head.repo.full_name == github.repository)
+    # Permissão no job, não no workflow: o escopo default de um job
+    # herdado do topo é maior do que o que ele precisa.
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -158,7 +177,7 @@ jobs:
       # Organização e chave vêm das variables do repositório, não do
       # sonar-project.properties: um fork roda sem editar arquivo nenhum.
       - name: SonarQube Cloud scan
-        uses: SonarSource/sonarqube-scan-action@v8
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
@@ -170,7 +189,7 @@ jobs:
       # este passo o job fica verde mesmo com o gate vermelho, e o bloqueio
       # dependeria do GitHub App do Sonar estar instalado.
       - name: Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@v1
+        uses: SonarSource/sonarqube-quality-gate-action@7a5fffe8e523c40e0c740b6bc2712ab503e52efa # v1.2.1
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
