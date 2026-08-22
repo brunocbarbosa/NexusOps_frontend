@@ -72,6 +72,12 @@ percebe. O passo torna o gate uma falha de job, visível no YAML.
 `fetch-depth: 0` no job: sem o histórico completo o Sonar não consegue datar linhas nem calcular *New
 Code*. A análise sai mesmo assim — medindo a coisa errada, que é pior que não sair.
 
+**Corrigido em 2026-08-22, depois do merge:** o job roda em PR e no push de `main`, nunca no push de
+`development`. O plano da organização no SonarCloud não dá acesso a branch fora da principal — a
+leitura do gate com `branch=development` responde 403 com `Organization is not allowed to access
+data from non main branches`. Nada se perde: o commit que chega em `development` é o mesmo que já
+passou pelo gate no PR.
+
 ### 3.5 `organization` e `projectKey` fora do arquivo versionado
 
 Vão por `args` a partir de `vars.SONAR_ORGANIZATION` e `vars.SONAR_PROJECT_KEY`. Um fork analisa no
