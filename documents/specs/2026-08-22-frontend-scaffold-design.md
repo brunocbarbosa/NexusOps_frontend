@@ -62,7 +62,7 @@ Todas verificadas no registry npm em 2026-08-22.
 | `next` | 16.3.2 | App Router; `output: 'standalone'` |
 | `react` / `react-dom` | 19.2.8 | |
 | `typescript` | 6.0.3 | teto do typescript-eslint — ver 2.2 |
-| `eslint` | 10.9.0 | flat config |
+| `eslint` | ~~10.9.0~~ **9.39.5** | flat config — ver nota abaixo da tabela |
 | `typescript-eslint` | 8.67.0 | modo *type-checked* |
 | `tailwindcss` | 4.3.3 | config CSS-first, sem `tailwind.config.js` |
 | `shadcn` (CLI) | 4.19.0 | escreve em `src/components/ui/` |
@@ -71,6 +71,8 @@ Todas verificadas no registry npm em 2026-08-22.
 | `@tanstack/react-virtual` | 3.14.10 | |
 | `jest` | 30.4.2 | via `next/jest` |
 | `@playwright/test` | 1.62.1 | |
+
+> **Correção de execução (2026-08-22).** O ESLint ficou em `9.39.5`, não `10.9.0`. Ver §6.
 
 **Gerenciador de pacotes: npm.** É o único instalado no ambiente (Node 24.15.0, npm 11.12.1), e o
 lockfile fixa o padrão para o repositório.
@@ -105,7 +107,7 @@ camada em uma tentativa, em vez de deixar dez peças suspeitas ao mesmo tempo.
 | # | Camada | Verificação de saída |
 | --- | --- | --- |
 | 1 | `create-next-app` (traz Tailwind 4) + `output: 'standalone'` | `build` gera `.next/standalone` |
-| 2 | TS 6.0.3 + ESLint 10 flat config type-checked | `lint` limpo |
+| 2 | TS 6.0.3 + ESLint 9.39.5 flat config type-checked | `lint` limpo |
 | 3 | `shadcn init` sobre o Tailwind da camada 1 + componente `button` | `dev` renderiza estilizado |
 | 4 | TanStack Query/Table/Virtual + `providers.tsx` | `build` passa com o provider montado |
 | 5 | Jest+RTL, Playwright, Husky+Commitlint | suítes verdes; commit inválido barrado |
@@ -150,8 +152,12 @@ Dockerfile, configuração do SonarCloud, React Compiler.
 
 Quatro majors recentes conversando entre si — Next 16, ESLint 10, Jest 30 e TS 6.
 
-- **`eslint-config-next` pode arrastar plugins que ainda não declaram suporte a ESLint 10.** O peer
-  do `typescript-eslint` aceita `^10`, mas o conjunto todo não foi verificado.
+- ~~`eslint-config-next` pode arrastar plugins que ainda não declaram suporte a ESLint 10.~~
+  **Confirmado na execução (2026-08-22).** `eslint-plugin-react`, `eslint-plugin-import` e
+  `eslint-plugin-jsx-a11y` param no `^9` em suas versões `latest` — não há para onde atualizar. O
+  projeto fica em `eslint@9.39.5`, que carrega a dist-tag `maintenance` e portanto continua suportado.
+  O objetivo da camada era lint com informação de tipo, e isso funciona no 9. Revisitar quando os três
+  plugins alcançarem o ESLint 10.
 - **`next/jest` com Jest 30** é a combinação menos exercitada do conjunto.
 
 Se uma camada travar: parar e reportar, não forçar a instalação. Ver 2.2.

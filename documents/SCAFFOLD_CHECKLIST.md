@@ -18,11 +18,11 @@ depois do comando rodar.
 
 ## Camada 2 — TypeScript e lint
 
-- [ ] Fixar `typescript@6.0.3` (não o `latest` — ver §2.2 da spec)
-- [ ] `strict: true` no `tsconfig.json`
-- [ ] ESLint 10 flat config + `typescript-eslint` em modo type-checked
-- [ ] **Verificar:** `npm run lint` limpo
-- [ ] **Verificar:** regra com tipo realmente ativa (Promise flutuante é detectada)
+- [x] Fixar `typescript@6.0.3` (não o `latest` — ver §2.2 da spec)
+- [x] `strict: true` no `tsconfig.json`
+- [x] ESLint **9.39.5** flat config + `typescript-eslint` type-checked — ver desvio 2026-08-22
+- [x] **Verificar:** `npm run lint` limpo
+- [x] **Verificar:** regra com tipo realmente ativa (Promise flutuante é detectada)
 - [ ] Commit
 
 ## Camada 3 — Estilo e Design System
@@ -73,4 +73,4 @@ sustentou.
 
 | Data | Camada | Desvio | Motivo |
 | --- | --- | --- | --- |
-| — | — | — | — |
+| 2026-08-22 | 2 | ESLint fixado em **9.39.5**, não 10.9.0 | Nenhuma versão de `eslint-plugin-react`, `eslint-plugin-import` ou `eslint-plugin-jsx-a11y` suporta ESLint 10 — as três `latest` param no `^9`. O ESLint 9.39.5 carrega a dist-tag `maintenance`, logo é linha mantida. O objetivo da camada (lint com informação de tipo) foi atingido no 9. |
