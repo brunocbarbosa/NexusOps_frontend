@@ -27,11 +27,11 @@ depois do comando rodar.
 
 ## Camada 3 — Estilo e Design System
 
-- [ ] Confirmar Tailwind 4 operante (config CSS-first, sem `tailwind.config.js`)
-- [ ] `shadcn init`
-- [ ] Adicionar componente `button` como prova do pipeline
-- [ ] `src/lib/utils.ts` com `cn()`
-- [ ] **Verificar:** `npm run dev` renderiza o botão estilizado
+- [x] Confirmar Tailwind 4 operante (config CSS-first, sem `tailwind.config.js`)
+- [x] `shadcn init`
+- [x] Adicionar componente `button` como prova do pipeline
+- [x] `src/lib/utils.ts` com `cn()`
+- [x] **Verificar:** `npm run dev` renderiza o botão estilizado
 - [ ] Commit
 
 ## Camada 4 — TanStack
