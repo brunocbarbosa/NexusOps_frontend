@@ -1,0 +1,3 @@
+# Só lint: rápido o bastante para não atrapalhar o fluxo. A suíte de testes
+# roda na CI, não a cada commit.
+npm run lint

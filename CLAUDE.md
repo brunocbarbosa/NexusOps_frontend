@@ -7,14 +7,48 @@ cada `next dev`) e ele avisa que esta versão tem *breaking changes* em relaçã
 pré-treinado dos agentes, apontando a documentação real em `node_modules/next/dist/docs/`. Consulte
 essa pasta antes de escrever código de Next, em vez de confiar na memória.
 
+## Comandos
+
+| Comando | Faz |
+| --- | --- |
+| `npm run dev` | servidor de desenvolvimento |
+| `npm run build` | build de produção; emite `.next/standalone/` |
+| `npm run start:standalone` | sobe o artefato standalone (o mesmo que a imagem Docker roda) |
+| `npm run lint` | ESLint, com regras que usam informação de tipo |
+| `npm test` | Jest + RTL |
+| `npm test -- <caminho>` | **um único arquivo de teste** |
+| `npm run test:watch` | Jest em watch |
+| `npm run test:coverage` | cobertura |
+| `npm run e2e` | Playwright contra o build standalone |
+| `npm run e2e:ui` | Playwright em modo interativo |
+
+`npx tsc --noEmit` para checagem de tipos isolada.
+
+### Coisas que mordem
+
+- **`next start` não funciona com `output: standalone`.** Use `npm run start:standalone`, que copia
+  `.next/static` para dentro de `.next/standalone/` antes de subir — o `next build` não faz essa
+  cópia. Sem ela o servidor responde 200 servindo a página **sem CSS**, e um teste que só verifique
+  texto passa verde.
+- **TypeScript está fixado em 6.0.3, não no `latest`.** O `typescript-eslint` declara peer
+  `<6.1.0`; subir para o TS 7 desliga silenciosamente todas as regras de lint com tipo.
+- **ESLint está em 9.39.5, não 10.** `eslint-plugin-react`, `eslint-plugin-import` e
+  `eslint-plugin-jsx-a11y` não suportam o ESLint 10 em nenhuma versão publicada.
+- **Os hooks de commit são reais**: `pre-commit` roda lint, `commit-msg` roda Commitlint
+  (Conventional Commits). Mensagem fora do padrão é rejeitada.
+
 ## Estado do repositório
 
-O repositório ainda **não tem código**: apenas `LICENSE`, `README.md` e `documents/`. Não existe
-`package.json`, nem toolchain de build/lint/teste instalada.
+Scaffold pronto e verificado: Next 16 (App Router, `src/`, `output: standalone`), TypeScript 6
+estrito, Tailwind 4 + shadcn/ui (base Radix, preset nova), TanStack Query/Table/Virtual, Jest + RTL,
+Playwright, Husky + Commitlint.
 
-Consequência prática: **não há comandos de build, lint ou teste para rodar hoje**. Assim que o
-scaffold do Next.js existir, esta seção deve ser substituída pelos comandos reais (incluindo como
-rodar um único teste).
+**Ainda não existe**: nenhuma tela de produto, nenhum cliente de API, nenhum Route Handler do BFF,
+Dockerfile nem configuração do SonarCloud. `src/app/page.tsx` é página de verificação do scaffold,
+não UI de produto — a primeira tela real substitui o arquivo inteiro.
+
+O design que originou este scaffold está em
+[`documents/specs/2026-08-22-frontend-scaffold-design.md`](./documents/specs/2026-08-22-frontend-scaffold-design.md).
 
 ## Fluxo de branches
 
@@ -113,6 +147,9 @@ Pontos que mudam o desenho das telas — o *porquê* de cada um está em `docume
 
 ## Próximo passo
 
-Scaffold do Next.js + TypeScript, com Tailwind/Shadcn, TanStack Query, Husky e Commitlint. Ao fazê-lo,
-atualizar a seção "Estado do repositório" desta página com os comandos reais de dev, build, lint,
-teste unitário (e teste único) e E2E.
+A fatia de login ponta a ponta, que é o que prova a arquitetura de BFF decidida na spec: formulário
+com `tenantDomain`, Route Handler fazendo proxy para o NestJS, access token em cookie `httpOnly`,
+`middleware.ts` protegendo rotas e refresh serializado no servidor.
+
+O Next 16 traz guias locais diretamente aplicáveis a isso — veja
+`node_modules/next/dist/docs/01-app/02-guides/backend-for-frontend.md` e `.../multi-tenant.md`.

@@ -14,7 +14,7 @@ depois do comando rodar.
 - [x] `output: 'standalone'` em `next.config.ts`
 - [x] **Verificar:** `npm run dev` sobe sem erro
 - [x] **Verificar:** `npm run build` gera `.next/standalone`
-- [ ] Commit
+- [x] Commit
 
 ## Camada 2 — TypeScript e lint
 
@@ -23,7 +23,7 @@ depois do comando rodar.
 - [x] ESLint **9.39.5** flat config + `typescript-eslint` type-checked — ver desvio 2026-08-22
 - [x] **Verificar:** `npm run lint` limpo
 - [x] **Verificar:** regra com tipo realmente ativa (Promise flutuante é detectada)
-- [ ] Commit
+- [x] Commit
 
 ## Camada 3 — Estilo e Design System
 
@@ -32,7 +32,7 @@ depois do comando rodar.
 - [x] Adicionar componente `button` como prova do pipeline
 - [x] `src/lib/utils.ts` com `cn()`
 - [x] **Verificar:** `npm run dev` renderiza o botão estilizado
-- [ ] Commit
+- [x] Commit
 
 ## Camada 4 — TanStack
 
@@ -42,26 +42,26 @@ depois do comando rodar.
 - [x] `src/app/providers.tsx` com `QueryClientProvider`
 - [x] Provider montado no `layout.tsx`
 - [x] **Verificar:** `npm run build` passa com o provider montado
-- [ ] Commit
+- [x] Commit
 
 ## Camada 5 — Testes e hooks de commit
 
-- [ ] Jest 30 via `next/jest`, ambiente `jsdom`
-- [ ] RTL + jest-dom, `src/test/setup.ts`
-- [ ] Teste de fumaça da home
-- [ ] **Verificar:** `npm test` passa
-- [ ] **Verificar:** teste único funciona (`npm test -- <arquivo>`)
-- [ ] Playwright contra `build && start`, não `dev`
-- [ ] Teste E2E de fumaça
-- [ ] **Verificar:** `npm run e2e` passa
-- [ ] Husky + Commitlint (Conventional Commits)
-- [ ] **Verificar:** commit com mensagem inválida é barrado
-- [ ] Commit
+- [x] Jest 30 via `next/jest`, ambiente `jsdom`
+- [x] RTL + jest-dom, `src/test/setup.ts`
+- [x] Teste de fumaça da home
+- [x] **Verificar:** `npm test` passa
+- [x] **Verificar:** teste único funciona (`npm test -- <arquivo>`)
+- [x] Playwright contra o **artefato standalone**, não `next start` — ver desvios (b)
+- [x] Teste E2E de fumaça
+- [x] **Verificar:** `npm run e2e` passa
+- [x] Husky + Commitlint (Conventional Commits)
+- [x] **Verificar:** commit com mensagem inválida é barrado
+- [x] Commit
 
 ## Fechamento
 
-- [ ] Atualizar a seção "Estado do repositório" do `CLAUDE.md` com os comandos reais
-- [ ] Registrar desvios da spec, se houver
+- [x] Atualizar a seção "Estado do repositório" do `CLAUDE.md` com os comandos reais
+- [x] Registrar desvios da spec, se houver
 - [ ] Merge de `development` para `main`
 
 ---
@@ -74,3 +74,5 @@ sustentou.
 | Data | Camada | Desvio | Motivo |
 | --- | --- | --- | --- |
 | 2026-08-22 | 2 | ESLint fixado em **9.39.5**, não 10.9.0 | Nenhuma versão de `eslint-plugin-react`, `eslint-plugin-import` ou `eslint-plugin-jsx-a11y` suporta ESLint 10 — as três `latest` param no `^9`. O ESLint 9.39.5 carrega a dist-tag `maintenance`, logo é linha mantida. O objetivo da camada (lint com informação de tipo) foi atingido no 9. |
+| 2026-08-22 | 5 | Playwright sobe `node .next/standalone/server.js` via `scripts/start-standalone.sh`, não `next start` | `next start` é incompatível com `output: standalone` (o próprio Next avisa) e leria de `.next/`, mascarando que o build **não copia** `.next/static` para dentro do standalone. Medido: sem a cópia, o HTML responde 200 e o CSS responde 404. O E2E passou a afirmar estilo computado, então detecta a falha em vez de passar verde. |
+| 2026-08-22 | 5 | `jest-environment-jsdom` em 30.4.1, não 30.4.2 | Não acompanha o core do Jest em lockstep; 30.4.1 é a última publicada. |
