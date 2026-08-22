@@ -22,25 +22,33 @@ APPLY=false
 # Checks obrigatórios. São os `name:` dos jobs em .github/workflows/, não os
 # ids — o GitHub identifica o status check pelo nome exibido.
 #
-# `sonar` entra na lista sabendo que ele só roda com SONAR_ENABLED=true.
-# Medido no PR #1: sem a variable o job reporta `conclusion=skipped`, e o
-# GitHub conta *skipped* como satisfeito num check obrigatório — ou seja, o
-# check fica verde SEM ter analisado nada. Verde por ausência, não por
-# qualidade. Manter a variable ligada é o que dá sentido a esta linha.
-CHECKS=(quality e2e sonar commits branch-policy codeql audit secrets)
+# **Um check pulado conta como satisfeito.** Medido: um job que o `if` pula
+# reporta `conclusion=skipped`, e o GitHub trata isso como aprovado num check
+# obrigatório. Exigir um check que nunca roda é pedir um verde por ausência, e
+# é por isso que as duas listas abaixo diferem em vez de serem a mesma.
+CHECKS_COMMON=(quality e2e commits branch-policy codeql audit secrets)
 
-# `dependency-review` fica de fora da lista: só existe em evento de PR, e em
+# `sonar` só na `development`. O plano da organização no SonarCloud serve dados
+# apenas da branch principal do projeto, que é a `development` — um PR mirando
+# `main` é recusado com
+# `Organization is not allowed to access data from PR targeting non main branches`.
+# O job pula nesse caso de propósito, então exigi-lo em `main` seria exigir um
+# skip.
+CHECKS_DEVELOPMENT=("${CHECKS_COMMON[@]}" sonar)
+CHECKS_MAIN=("${CHECKS_COMMON[@]}")
+
+# `dependency-review` fica de fora das duas: só existe em evento de PR, e em
 # push de merge ele nunca reporta.
 
 checks_json() {
-  printf '%s\n' "${CHECKS[@]}" | python3 -c '
+  printf '%s\n' "$@" | python3 -c '
 import json, sys
 print(json.dumps([{"context": c.strip()} for c in sys.stdin if c.strip()]))'
 }
 
 ruleset_payload() {
-  local name="$1" branch="$2" linear="$3"
-  python3 - "$name" "$branch" "$linear" "$(checks_json)" <<'PY'
+  local name="$1" branch="$2" linear="$3"; shift 3
+  python3 - "$name" "$branch" "$linear" "$(checks_json "$@")" <<'PY'
 import json, sys
 name, branch, linear, checks = sys.argv[1], sys.argv[2], sys.argv[3] == "true", json.loads(sys.argv[4])
 
@@ -86,8 +94,8 @@ PY
 }
 
 upsert() {
-  local name="$1" branch="$2" linear="$3" payload id
-  payload="$(ruleset_payload "$name" "$branch" "$linear")"
+  local name="$1" branch="$2" linear="$3" payload id; shift 3
+  payload="$(ruleset_payload "$name" "$branch" "$linear" "$@")"
 
   id="$(gh api "repos/$REPO/rulesets" --jq ".[] | select(.name==\"$name\") | .id" 2>/dev/null || true)"
 
@@ -115,8 +123,8 @@ echo "Repositório: $REPO"
 $APPLY || echo "(simulação — rode com --apply para valer)"
 echo
 
-upsert "development" "development" false
-upsert "main"        "main"        true
+upsert "development" "development" false "${CHECKS_DEVELOPMENT[@]}"
+upsert "main"        "main"        true  "${CHECKS_MAIN[@]}"
 
 if $APPLY; then
   echo

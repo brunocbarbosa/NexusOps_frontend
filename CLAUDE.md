@@ -45,19 +45,28 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
 - **O `sonarqube-scan-action` sai com 0 mesmo quando o Quality Gate reprova** — ele só envia o
   relatório. Quem reprova é o passo `sonarqube-quality-gate-action` logo depois. Remover esse passo
   deixa o gate verde para sempre.
-- **O SonarCloud desta organização só dá acesso à branch principal.** Duas consequências, ambas
-  medidas, e as duas chegam como o mesmo `curl: (22) The requested URL returned error: 403` no passo
-  do Quality Gate — com o scan tendo passado. Só o corpo da resposta diz qual é qual:
+- **O SonarCloud desta organização só serve dados da branch principal do projeto — que lá é a
+  `development`, não a `main`.** Foi configurada assim de propósito: `development` é o alvo de todo
+  PR de feature, e é o recorte que precisa ser legível. Duas mensagens de recusa, ambas chegando
+  como o mesmo `curl: (22) The requested URL returned error: 403` no passo do Quality Gate, com o
+  scan tendo passado — só o corpo da resposta distingue:
 
-  1. `Organization is not allowed to access data from non main branches` → por isso o job `sonar`
-     roda em PR e no push de `main`, nunca no push de `development`.
-  2. `Organization is not allowed to access data from PR targeting non main branches` → por isso
-     todo PR força `-Dsonar.pullrequest.base=main`, mesmo mirando `development`.
+  - `Organization is not allowed to access data from non main branches`
+  - `Organization is not allowed to access data from PR targeting non main branches`
 
-  **Não é tipo de branch.** Reclassificar `development` de `SHORT` para `LONG` não mudou nada. E não
-  confie em PR antigo que passou: os PRs #1 e #3 passaram porque `development` ainda não existia no
-  SonarCloud e o scanner caiu de volta para `main` sozinho. Assim que uma análise recriou a branch
-  lá, o mesmo PR passou a dar 403.
+  Por isso o job `sonar` roda **só em PR para `development` e no push de `development`**, e o
+  ruleset de `main` **não** exige `sonar` — exigir um check que sempre pula é pedir verde por
+  ausência. O PR de release `development → main` fica sem gate de propósito: ele carrega código que
+  já passou pelo gate ao entrar em `development`.
+
+  Três becos sem saída já percorridos, para ninguém repetir: **não é tipo de branch** (reclassificar
+  `development` de `SHORT` para `LONG` não muda nada); **não adianta forçar
+  `-Dsonar.pullrequest.base`** (o SonarCloud lê o alvo pela integração com o GitHub e ignora o
+  parâmetro — e informá-lo ainda desliga a auto-configuração, quebrando o scan com
+  `Parameter 'sonar.pullrequest.key' is mandatory`); e **não confie em PR antigo que passou** (os
+  #1 e #3 passaram porque `development` ainda não existia no SonarCloud e o scanner caía para `main`
+  sozinho).
+
 - **`fetch-depth: 0` nos jobs `sonar` e `secrets` não é otimização.** Sem o histórico completo o
   Sonar não data as linhas e mede "New Code" errado, e o gitleaks não enxerga o commit onde o
   segredo realmente entrou.
