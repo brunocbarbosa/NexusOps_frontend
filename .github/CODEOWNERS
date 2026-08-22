@@ -1,0 +1,13 @@
+# Dono padrão de tudo.
+*                       @brunocbarbosa
+
+# Cópia mantida no repositório do backend. Alteração aqui é quase sempre
+# engano: a correção pertence ao repositório de origem.
+/documents/backend/     @brunocbarbosa
+
+# Pipeline, política de branches e empacotamento: mudança aqui altera o que
+# pode entrar em main.
+/.github/               @brunocbarbosa
+/Dockerfile             @brunocbarbosa
+/scripts/               @brunocbarbosa
+/sonar-project.properties @brunocbarbosa

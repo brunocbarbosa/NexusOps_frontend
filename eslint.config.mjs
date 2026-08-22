@@ -48,6 +48,15 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    // Saída de ferramenta, não código. O relatório HTML do Istanbul em
+    // coverage/ traz JS de terceiros com diretivas eslint-disable próprias, e
+    // lintá-lo faz `npm run lint` reprovar dependendo apenas de já ter rodado
+    // `npm run test:coverage` antes — ordem que muda entre a máquina e a CI.
+    "coverage/**",
+    "test-results/**",
+    "playwright-report/**",
+    "blob-report/**",
+    ".scannerwork/**",
     "next-env.d.ts",
     // O Next reescreve este arquivo; não é código nosso para lintar.
     "AGENTS.md",

@@ -8,6 +8,25 @@ const createJestConfig = nextJest({ dir: "./" });
 
 const config: Config = {
   coverageProvider: "v8",
+  // O que o SonarCloud mede. Sem a lista, o Jest só reporta cobertura dos
+  // arquivos que algum teste importou — um arquivo sem teste nenhum some do
+  // relatório em vez de aparecer com 0%, que é justamente o que interessa ver.
+  collectCoverageFrom: [
+    "src/**/*.{ts,tsx}",
+    "!src/**/*.d.ts",
+    "!src/**/*.test.{ts,tsx}",
+    "!src/test/**",
+    // Espelha sonar.exclusions. O shadcn reescreve estes arquivos a cada
+    // `shadcn add`, então eles ficam fora da análise — e um arquivo que está
+    // no lcov mas não na análise faz o scanner avisar
+    // `Could not resolve 1 file paths`, ruído permanente que esconderia um
+    // descasamento de caminho de verdade no dia em que houver um.
+    "!src/components/ui/**",
+  ],
+  // `lcov` hoje é default do Jest, mas o gate do Sonar depende do arquivo
+  // coverage/lcov.info existir. Declarar explicitamente impede que uma troca
+  // de default numa versão futura desligue a cobertura em silêncio.
+  coverageReporters: ["text-summary", "lcov"],
   testEnvironment: "jsdom",
   setupFilesAfterEnv: ["<rootDir>/src/test/setup.ts"],
   // O build standalone copia um package.json para .next/, e o haste map do

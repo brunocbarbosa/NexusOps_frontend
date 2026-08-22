@@ -26,6 +26,10 @@ Thumbs.db
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/blob-report/
+/.scannerwork/
 
 # next.js
 /.next/

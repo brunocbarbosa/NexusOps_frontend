@@ -162,7 +162,7 @@ three, so a failure names its own neighbourhood before you open a file.
 | Tier          | Command             | Reaches                                     | Needs a browser |
 | ------------- | ------------------- | ------------------------------------------- | --------------- |
 | **unit**      | `npm run test`      | components in isolation, mocked network      | no              |
-| **e2e**       | `npm run test:e2e`  | critical flows against a booted app          | yes (headless)  |
+| **e2e**       | `npm run e2e`       | critical flows against a booted app          | yes (headless)  |
 
 **Jest + React Testing Library** test behaviour, interaction and accessibility — queries go through
 roles and labels, so a test that passes is also evidence the component is reachable by a screen
@@ -171,10 +171,34 @@ opening a ticket, and losing a concurrent edit to a `409`.
 
 ---
 
+## Pipeline
+
+Three workflows, split by what triggers them.
+
+| Workflow | Runs on | Jobs |
+| --- | --- | --- |
+| **CI** | PRs and pushes to `development` and `main` | `branch-policy`, `commits`, `quality`, `e2e`, `sonar` |
+| **Security** | the same, plus a weekly schedule | `codeql`, `dependency-review`, `audit`, `secrets` |
+| **Release** | push to `main`, and `v*.*.*` tags | builds the image and pushes it to GHCR with a signed provenance attestation |
+
+`Security` is separate because of the schedule: a CVE is published without anyone pushing a commit,
+so a workflow triggered only by push would never find it.
+
+**The branch policy is enforced, not agreed.** `development` is the working branch and `main` only
+takes `development`, both through PRs with green checks. A GitHub ruleset can require a PR, the
+checks and linear history — it cannot say *which* branch a PR may come from, so that half lives in
+the `branch-policy` job, and `scripts/setup-branch-rulesets.sh` makes it a required check. Neither
+piece is sufficient alone.
+
+`sonar` waits on the SonarCloud Quality Gate instead of trusting the scan's exit code: the scan only
+uploads the report and exits 0 even when the gate fails.
+
+---
+
 ## Getting started
 
-> **The application is not scaffolded yet** — this repository currently holds documentation only.
-> The commands below are the intended workflow and will work once the Next.js scaffold lands.
+> The scaffold and the pipeline are in place; the product screens are not. `src/app/page.tsx` is a
+> scaffold verification page, and the first real screen replaces it entirely.
 
 **Requirements:** Node.js 24 (same major as the backend), npm, and a running [NexusOps API](https://github.com/brunocbarbosa/NexusOps_backend).
 
@@ -189,8 +213,9 @@ npm run dev                  # http://localhost:3001
 
 ```bash
 npm run test                 # unit tier — Jest + RTL
-npm run test:e2e             # Playwright, headless
-npm run lint                 # ESLint
+npm run e2e                  # Playwright, headless, against the standalone artifact
+npm run lint                 # ESLint, with type-aware rules
+npm run typecheck            # tsc --noEmit
 npm run build                # Next.js production build (standalone output)
 ```
 
@@ -201,7 +226,7 @@ small — the image copies the standalone bundle instead of `node_modules`.
 
 ## Project layout
 
-The intended structure, once the scaffold exists:
+The structure. `features/` holds one folder per domain; only `identity` lands with the login slice.
 
 ```
 src/
@@ -217,6 +242,9 @@ src/
     api/                    # the HTTP chokepoint: auth header, single-flight refresh, error mapping
     query/                  # QueryClient, shared query keys and defaults
 e2e/                        # Playwright specs
+.github/workflows/          # CI, Security, Release
+scripts/                    # start-standalone.sh, setup-branch-rulesets.sh
+Dockerfile                  # multi-stage image over the standalone output
 documents/                  # project documentation (Portuguese)
   backend/                  # mirrored from the backend repo — read-only here
 ```
@@ -234,14 +262,16 @@ Project documentation is written in Portuguese; the code and its comments are in
 | [`documents/backend/USERS.md`](./documents/backend/USERS.md)                         | Measured auth behaviour — login, refresh rotation, passwords, soft delete |
 | [`documents/backend/TENANCY_EXTENSION.md`](./documents/backend/TENANCY_EXTENSION.md) | How tenant isolation is enforced, and why the API answers 404 not 403   |
 | [`documents/backend/RLS_NOTES.md`](./documents/backend/RLS_NOTES.md)                 | Row-Level Security research from the backend, kept here for context     |
+| [`documents/specs/2026-08-22-cicd-security-design.md`](./documents/specs/2026-08-22-cicd-security-design.md) | The pipeline: why four workflows, where the branch policy is enforced |
+| [`SECURITY.md`](./SECURITY.md)                                                       | How to report a vulnerability, and what the pipeline already checks     |
 | [`CLAUDE.md`](./CLAUDE.md)                                                           | Working agreements and traps, for both humans and AI agents             |
 
 ---
 
 ## Roadmap
 
-- [ ] Next.js scaffold — TypeScript strict, App Router, `standalone` output
-- [ ] Tooling — ESLint, Prettier, Husky, Commitlint
+- [x] Next.js scaffold — TypeScript strict, App Router, `standalone` output
+- [x] Tooling — ESLint, Husky, Commitlint
 - [ ] Design System — Tailwind tokens, shadcn/ui primitives, the app shell
 - [ ] API client — auth header, single-flight refresh, status-code error mapping
 - [ ] Identity — login with `tenantDomain`, session handling, RBAC-aware navigation
@@ -250,7 +280,7 @@ Project documentation is written in Portuguese; the code and its comments are in
 - [ ] Assets — inventory of notebooks and licenses
 - [ ] Async reports — `202 Accepted` plus SSE/WebSocket completion notice
 - [ ] Tests — Jest + RTL unit tier, Playwright critical flows
-- [ ] CI/CD — quality gate, SonarCloud, Docker image published to GHCR
+- [x] CI/CD — quality gate, SonarCloud, security scanning, Docker image published to GHCR
 
 ---
 

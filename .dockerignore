@@ -1,0 +1,28 @@
+# Contexto de build. Sem este arquivo o daemon recebe node_modules inteiro
+# (centenas de MB) antes de qualquer instrução do Dockerfile rodar.
+.git
+.github
+node_modules
+.next
+out
+build
+coverage
+test-results
+playwright-report
+blob-report
+.scannerwork
+
+# Ferramentas e documentação não entram na imagem.
+.claude
+.husky
+documents
+e2e
+playwright.config.ts
+jest.config.ts
+commitlint.config.mjs
+*.md
+!README.md
+.env*
+*.tsbuildinfo
+.vscode
+.idea
