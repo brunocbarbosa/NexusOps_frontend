@@ -21,8 +21,10 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
 | `npm run test:coverage` | cobertura |
 | `npm run e2e` | Playwright contra o build standalone |
 | `npm run e2e:ui` | Playwright em modo interativo |
+| `npm run typecheck` | `tsc --noEmit` isolado |
+| `docker build -t nexusops-frontend .` | mesma imagem que a CI publica no GHCR |
+| `bash scripts/setup-branch-rulesets.sh` | simula a política de branches no GitHub (`--apply` aplica) |
 
-`npx tsc --noEmit` para checagem de tipos isolada.
 
 ### Coisas que mordem
 
@@ -37,15 +39,31 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
 - **Os hooks de commit são reais**: `pre-commit` roda lint, `commit-msg` roda Commitlint
   (Conventional Commits). Mensagem fora do padrão é rejeitada.
 
+- **Automatic Analysis do SonarCloud precisa estar DESLIGADA.** Com ela ligada, o job `sonar` morre
+  com `You are running CI analysis while Automatic Analysis is enabled`. É o erro mais provável de
+  aparecer na primeira execução da pipeline.
+- **O `sonarqube-scan-action` sai com 0 mesmo quando o Quality Gate reprova** — ele só envia o
+  relatório. Quem reprova é o passo `sonarqube-quality-gate-action` logo depois. Remover esse passo
+  deixa o gate verde para sempre.
+- **`fetch-depth: 0` nos jobs `sonar` e `secrets` não é otimização.** Sem o histórico completo o
+  Sonar não data as linhas e mede "New Code" errado, e o gitleaks não enxerga o commit onde o
+  segredo realmente entrou.
+- **`e2e` e `e2e:ui` são os nomes dos scripts**, não `test:e2e`.
+
 ## Estado do repositório
 
 Scaffold pronto e verificado: Next 16 (App Router, `src/`, `output: standalone`), TypeScript 6
 estrito, Tailwind 4 + shadcn/ui (base Radix, preset nova), TanStack Query/Table/Virtual, Jest + RTL,
 Playwright, Husky + Commitlint.
 
-**Ainda não existe**: nenhuma tela de produto, nenhum cliente de API, nenhum Route Handler do BFF,
-Dockerfile nem configuração do SonarCloud. `src/app/page.tsx` é página de verificação do scaffold,
-não UI de produto — a primeira tela real substitui o arquivo inteiro.
+Pipeline pronta: GitHub Actions em três workflows (`CI`, `Security`, `Release`), SonarCloud com
+Quality Gate bloqueante, CodeQL, Dependency Review, `npm audit`, gitleaks, Dependabot e imagem Docker
+publicada no GHCR a cada merge em `main`.
+
+**Ainda não existe**: nenhuma tela de produto e nenhum cliente de API. O único Route Handler é
+`src/app/api/health/route.ts`, que serve ao `HEALTHCHECK` da imagem e não toca no backend — o
+primeiro Route Handler de produto é o proxy de login. `src/app/page.tsx` é página de verificação do
+scaffold, não UI de produto: a primeira tela real substitui o arquivo inteiro.
 
 O design que originou este scaffold está em
 [`documents/specs/2026-08-22-frontend-scaffold-design.md`](./documents/specs/2026-08-22-frontend-scaffold-design.md).
@@ -57,6 +75,10 @@ O design que originou este scaffold está em
 - Parta de `development` para qualquer feature ou correção — nunca de `main`.
 - **`main` só recebe código vindo de `development`**, nunca commits diretos e nunca merge de uma
   branch de feature. `main` é a linha de release.
+- Isto é **exigido**, não combinado: o job `branch-policy` da CI reprova PR para `main` vindo de
+  outra branch, e `scripts/setup-branch-rulesets.sh` aplica os rulesets que exigem PR e checks
+  verdes nas duas branches. Ruleset do GitHub não sabe expressar "a head branch precisa ser
+  `development`" — por isso a regra vive nos dois lugares, e precisa dos dois.
 - O `.claude/` é versionado neste repositório: skills e agents foram ajustados à stack decidida aqui,
   então reinstalá-los via `npx claude-code-templates` sobrescreve as customizações. Veja o commit
   `f3a3938` para o que foi removido e por quê.
@@ -67,6 +89,7 @@ O design que originou este scaffold está em
 | ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
 | [`documents/MAIN.md`](./documents/MAIN.md)                                | entender o objetivo geral do produto e os diferenciais técnicos    |
 | [`documents/MAIN_FRONTEND.md`](./documents/MAIN_FRONTEND.md)              | qualquer decisão de stack ou estrutura de pastas                  |
+| [`documents/specs/2026-08-22-cicd-security-design.md`](./documents/specs/2026-08-22-cicd-security-design.md) | mexer em workflow, Dockerfile ou política de branches |
 | [`documents/backend/USERS.md`](./documents/backend/USERS.md)              | implementar login, refresh, senhas ou telas de usuários           |
 | [`documents/backend/TENANCY_EXTENSION.md`](./documents/backend/TENANCY_EXTENSION.md) | entender por que a API responde 404 e não 403          |
 | [`documents/backend/RLS_NOTES.md`](./documents/backend/RLS_NOTES.md)      | contexto de isolamento no banco (não afeta o frontend diretamente)|
@@ -150,6 +173,9 @@ Pontos que mudam o desenho das telas — o *porquê* de cada um está em `docume
 A fatia de login ponta a ponta, que é o que prova a arquitetura de BFF decidida na spec: formulário
 com `tenantDomain`, Route Handler fazendo proxy para o NestJS, access token em cookie `httpOnly`,
 `middleware.ts` protegendo rotas e refresh serializado no servidor.
+
+É também onde entram os cabeçalhos de segurança HTTP (CSP, HSTS): CSP com Next exige nonce por
+requisição e pertence ao mesmo middleware, não ao `next.config.ts` isolado.
 
 O Next 16 traz guias locais diretamente aplicáveis a isso — veja
 `node_modules/next/dist/docs/01-app/02-guides/backend-for-frontend.md` e `.../multi-tenant.md`.
