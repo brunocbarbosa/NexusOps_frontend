@@ -125,10 +125,13 @@ jobs:
       - name: Build
         run: npm run build
 
-      # `npm exec --no` falha em vez de baixar da rede: o Playwright já é
-      # devDependency, e a versão do browser precisa casar com a do pacote.
+      # `--no` falha em vez de baixar da rede: o Playwright já é devDependency,
+      # e a versão do browser precisa casar com a do pacote. `--ignore-scripts`
+      # é redundante com `--no` e está aqui de propósito — é o que torna a
+      # ausência de execução de script uma propriedade declarada no comando, e
+      # não uma consequência de outra flag.
       - name: Install Playwright browser
-        run: npm exec --no -- playwright install --with-deps chromium
+        run: npm exec --no --ignore-scripts -- playwright install --with-deps chromium
 
       # playwright.config.ts sobe o artefato standalone por conta própria
       # (webServer), na porta 3100.
