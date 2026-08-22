@@ -36,12 +36,12 @@ depois do comando rodar.
 
 ## Camada 4 — TanStack
 
-- [ ] `@tanstack/react-query`
-- [ ] `@tanstack/react-table` (declarada, sem uso ainda)
-- [ ] `@tanstack/react-virtual` (declarada, sem uso ainda)
-- [ ] `src/app/providers.tsx` com `QueryClientProvider`
-- [ ] Provider montado no `layout.tsx`
-- [ ] **Verificar:** `npm run build` passa com o provider montado
+- [x] `@tanstack/react-query`
+- [x] `@tanstack/react-table` (declarada, sem uso ainda)
+- [x] `@tanstack/react-virtual` (declarada, sem uso ainda)
+- [x] `src/app/providers.tsx` com `QueryClientProvider`
+- [x] Provider montado no `layout.tsx`
+- [x] **Verificar:** `npm run build` passa com o provider montado
 - [ ] Commit
 
 ## Camada 5 — Testes e hooks de commit

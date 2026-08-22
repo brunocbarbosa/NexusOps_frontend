@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@tanstack/react-query": "5.101.4",
+    "@tanstack/react-table": "9.1.2",
+    "@tanstack/react-virtual": "3.14.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.33.0",
@@ -21,6 +24,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@tanstack/react-query-devtools": "5.101.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -31,6 +35,6 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.67.0"
   },
-  "description": "Frontend do NexusOps \u2014 SaaS B2B multi-tenant de helpdesk interno",
+  "description": "Frontend do NexusOps — SaaS B2B multi-tenant de helpdesk interno",
   "license": "MIT"
 }
