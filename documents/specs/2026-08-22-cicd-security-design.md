@@ -19,7 +19,7 @@ sem passar por PR verde, e todo merge em `main` publica uma imagem.
 | PR de branch qualquer direto para `main` | **reprovado** pelo job `branch-policy` |
 | `docker build` | imagem sobe, `/api/health` responde, CSS responde 200 |
 | Merge em `main` | `ghcr.io/brunocbarbosa/nexusops_frontend:latest` publicada |
-| `gh api .../branches/main/protection` | deixa de responder 404 |
+| `gh api .../rules/branches/main` | lista as regras ativas (o endpoint legado `branches/main/protection` **não** enxerga ruleset e responde 404 mesmo funcionando) |
 
 ## 2. Estado encontrado
 

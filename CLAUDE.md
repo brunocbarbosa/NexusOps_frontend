@@ -85,9 +85,11 @@ O design que originou este scaffold está em
 - Parta de `development` para qualquer feature ou correção — nunca de `main`.
 - **`main` só recebe código vindo de `development`**, nunca commits diretos e nunca merge de uma
   branch de feature. `main` é a linha de release.
-- Isto é **exigido**, não combinado: o job `branch-policy` da CI reprova PR para `main` vindo de
-  outra branch, e `scripts/setup-branch-rulesets.sh` aplica os rulesets que exigem PR e checks
-  verdes nas duas branches. Ruleset do GitHub não sabe expressar "a head branch precisa ser
+- Isto é **exigido**, não combinado, desde 2026-08-22: o job `branch-policy` da CI reprova PR para
+  `main` vindo de outra branch, e os rulesets aplicados por `scripts/setup-branch-rulesets.sh`
+  recusam push direto nas duas branches (`GH013: Repository rule violations found`). Conferir com
+  `gh api repos/brunocbarbosa/NexusOps_frontend/rules/branches/main` — o endpoint legado
+  `branches/main/protection` **não** enxerga ruleset e responde 404 mesmo com tudo ativo. Ruleset do GitHub não sabe expressar "a head branch precisa ser
   `development`" — por isso a regra vive nos dois lugares, e precisa dos dois.
 - O `.claude/` é versionado neste repositório: skills e agents foram ajustados à stack decidida aqui,
   então reinstalá-los via `npx claude-code-templates` sobrescreve as customizações. Veja o commit

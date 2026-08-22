@@ -73,8 +73,29 @@ Uma tarefa só é marcada depois da verificação passar — não depois do coma
 - [x] `CODEOWNERS`
 - [x] **Verificar:** `bash -n` limpo e simulação emite JSON válido para os dois rulesets
 - [x] Commit
-- [ ] **Aplicar:** `bash scripts/setup-branch-rulesets.sh --apply`
-- [ ] **Verificar:** `gh api repos/.../branches/main/protection` deixa de responder 404
+- [x] **Aplicar:** `bash scripts/setup-branch-rulesets.sh --apply` — rulesets `development` (id
+      21214233) e `main` (id 21214234), ambos `active`
+- [x] **Verificar:** as regras estão ativas nas duas branches
+
+      ```bash
+      gh api repos/brunocbarbosa/NexusOps_frontend/rules/branches/development
+      gh api repos/brunocbarbosa/NexusOps_frontend/rules/branches/main
+      ```
+
+      > **Não use `branches/<b>/protection`**: aquele endpoint só enxerga *branch protection*
+      > clássica e responde 404 mesmo com ruleset ativo e funcionando. Ruleset e branch protection
+      > são mecanismos distintos, e confundir os dois faz parecer que a aplicação falhou.
+
+- [x] **Verificar (teste negativo):** push direto recusado nas duas branches, medido com commit
+      vazio e `git reset --hard` em seguida:
+
+      ```
+      remote: error: GH013: Repository rule violations found for refs/heads/development.
+      remote: - Changes must be made through a pull request.
+      remote: - 8 of 8 required status checks are expected.
+      ```
+
+      O mesmo para `refs/heads/main`.
 
 ## Camada 6 — Documentação
 
@@ -173,3 +194,4 @@ Divergências entre o que a spec previu e o que a execução exigiu.
 | 2026-08-22 | 2 | `permissions` movido do topo do workflow para cada job | `S8264`: o escopo herdado do topo é maior do que o de que cada job precisa. |
 | 2026-08-22 | 2 | `npx playwright install` virou `npm exec --no -- playwright install` | `S6505`/`S8543`: o `npx` baixa e executa pacote da rede quando não o encontra local. `--no` falha em vez de baixar, e a versão do browser passa a vir do pacote já instalado. |
 | 2026-08-22 | 2 | O job `sonar` roda em PR e no push de `main`, nunca no push de `development` | Não previsto na spec, que assumia analisar as duas branches. O plano da organização no SonarCloud não dá acesso a branch fora da principal: a leitura do gate com `branch=development` responde 403 com `Organization is not allowed to access data from non main branches`. O diagnóstico inicial culpou o tipo da branch (`SHORT`) e estava errado — reclassificar para `LONG` não mudou o 403. |
+| 2026-08-22 | 5 | O critério de verificação do ruleset mudou de `branches/main/protection` para `rules/branches/<b>` | O endpoint legado só reporta *branch protection* clássica: com os dois rulesets ativos e recusando push, ele continua respondendo 404. O critério original daria falso negativo. |
