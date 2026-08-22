@@ -134,23 +134,22 @@ Nenhum é automatizável, e cada um falha de um jeito que não se parece com a c
       O gate já bloqueia sem ele (o passo `sonarqube-quality-gate-action` é quem reprova), mas os
       comentários no PR não aparecem.
 - [ ] **Conferir a New Code definition** do projeto.
-- [!] **Marcar `development` como branch de vida longa.** Medido no primeiro scan de branch: o
-      scanner logou `Branch name: development, type: short` e o passo do Quality Gate falhou com
-      `curl: (22) The requested URL returned error: 403` — branch `SHORT` não tem gate para
-      consultar, e o erro não se parece com a causa.
+- [x] **Confirmar o alcance do plano do SonarCloud.** Medido em 2026-08-22: a organização só dá
+      acesso à branch principal e aos PRs.
 
-      O padrão herdado da instância é `(branch|release)-.*`, que `development` não casa. Em
-      *Administration → Branches & Pull Requests* do projeto, trocar por:
-
-      ```
-      (development|branch|release)-?.*
+      ```bash
+      curl -s -o /dev/null -w '%{http_code}\n' 'https://sonarcloud.io/api/qualitygates/project_status?projectKey=brunocbarbosa_NexusOps_frontend&branch=main'         # 200
+      curl -s -o /dev/null -w '%{http_code}\n' 'https://sonarcloud.io/api/qualitygates/project_status?projectKey=brunocbarbosa_NexusOps_frontend&pullRequest=1'       # 200
+      curl -s -o /dev/null -w '%{http_code}\n' 'https://sonarcloud.io/api/qualitygates/project_status?projectKey=brunocbarbosa_NexusOps_frontend&branch=development'  # 403
       ```
 
-      Depois **apagar a branch `development`** na mesma tela: trocar o padrão não reclassifica uma
-      branch já analisada. O `main` já está correto (`LONG`, `isMain`).
+      O corpo do 403 é `Organization is not allowed to access data from non main branches`. O job
+      `sonar` passou a rodar só em PR e no push de `main`.
 
-      > A análise de **PR** não é afetada — ela passou verde no PR #1. O que quebra é só o scan do
-      > push em `development`.
+- [ ] **Opcional — reverter o padrão de branches de vida longa.** Durante o diagnóstico, o campo
+      *Detection of long lived branches* foi trocado de `(branch|release)-.*` para
+      `(development|branch|release)-?.*`. Isso **não** era a causa do 403 e agora é configuração
+      morta, já que `development` não é mais analisada. Sem efeito colateral em deixar como está.
 
 ---
 
@@ -173,4 +172,4 @@ Divergências entre o que a spec previu e o que a execução exigiu.
 | 2026-08-22 | 1, 4 | `npm ci --ignore-scripts` na CI e no Dockerfile | `S6505`: um `postinstall` de dependência transitiva roda com rede e FS do build. Verificado num clone limpo que lint, typecheck, testes e build passam sem os scripts — o único pacote da árvore com `postinstall` é o `unrs-resolver`, e o ESLint funciona sem ele. |
 | 2026-08-22 | 2 | `permissions` movido do topo do workflow para cada job | `S8264`: o escopo herdado do topo é maior do que o de que cada job precisa. |
 | 2026-08-22 | 2 | `npx playwright install` virou `npm exec --no -- playwright install` | `S6505`/`S8543`: o `npx` baixa e executa pacote da rede quando não o encontra local. `--no` falha em vez de baixar, e a versão do browser passa a vir do pacote já instalado. |
-| 2026-08-22 | 2 | O gate reprova no push em `development` até o SonarCloud reclassificar a branch | Não previsto na spec. O default da instância trata `development` como branch de vida curta, e branch curta não tem Quality Gate. Ver "Passos manuais no SonarCloud". |
+| 2026-08-22 | 2 | O job `sonar` roda em PR e no push de `main`, nunca no push de `development` | Não previsto na spec, que assumia analisar as duas branches. O plano da organização no SonarCloud não dá acesso a branch fora da principal: a leitura do gate com `branch=development` responde 403 com `Organization is not allowed to access data from non main branches`. O diagnóstico inicial culpou o tipo da branch (`SHORT`) e estava errado — reclassificar para `LONG` não mudou o 403. |

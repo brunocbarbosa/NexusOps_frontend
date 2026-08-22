@@ -152,13 +152,26 @@ jobs:
   sonar:
     name: sonar
     needs: quality
+    # Três condições, cada uma por um motivo diferente.
+    #
     # SONAR_ENABLED é o interruptor: sem ele, um fork ou um período sem token
     # deixaria o gate vermelho por falta de credencial, não por falta de
     # qualidade. Fork não enxerga secrets, então também fica de fora.
+    #
+    # E o push só analisa `main`. O plano da organização no SonarCloud não dá
+    # acesso a branch que não seja a principal — medido: a leitura do gate com
+    # `branch=development` responde 403 com
+    # `Organization is not allowed to access data from non main branches`,
+    # enquanto `branch=main` e `pullRequest=N` respondem 200. Analisar
+    # `development` produziria um scan que ninguém pode ler e um gate que nunca
+    # passa. Nada se perde: todo commit que chega em `development` passou pelo
+    # gate no PR, que é o mesmo commit.
     if: >-
       vars.SONAR_ENABLED == 'true' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.head.repo.full_name == github.repository)
+      ((github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository) ||
+       (github.event_name != 'pull_request' &&
+        github.ref == 'refs/heads/main'))
     # Permissão no job, não no workflow: o escopo default de um job
     # herdado do topo é maior do que o que ele precisa.
     permissions:
