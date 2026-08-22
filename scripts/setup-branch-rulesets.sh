@@ -22,9 +22,11 @@ APPLY=false
 # Checks obrigatórios. São os `name:` dos jobs em .github/workflows/, não os
 # ids — o GitHub identifica o status check pelo nome exibido.
 #
-# `sonar` entra na lista sabendo que ele só roda com SONAR_ENABLED=true. Um
-# check obrigatório que nunca reporta deixa o PR pendente para sempre, então
-# desligar a variable exige tirá-lo daqui também.
+# `sonar` entra na lista sabendo que ele só roda com SONAR_ENABLED=true.
+# Medido no PR #1: sem a variable o job reporta `conclusion=skipped`, e o
+# GitHub conta *skipped* como satisfeito num check obrigatório — ou seja, o
+# check fica verde SEM ter analisado nada. Verde por ausência, não por
+# qualidade. Manter a variable ligada é o que dá sentido a esta linha.
 CHECKS=(quality e2e sonar commits branch-policy codeql audit secrets)
 
 # `dependency-review` fica de fora da lista: só existe em evento de PR, e em

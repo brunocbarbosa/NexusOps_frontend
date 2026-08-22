@@ -82,6 +82,43 @@ Uma tarefa só é marcada depois da verificação passar — não depois do coma
 
 ---
 
+## Passos manuais no GitHub
+
+Descobertos rodando o PR #1. Nenhum é automatizável pelo repositório, e os dois deixam um check
+vermelho ou enganosamente verde até serem feitos.
+
+- [ ] **Criar o secret e as variables NESTE repositório.** Medido em 2026-08-22:
+      `gh api repos/brunocbarbosa/NexusOps_frontend/actions/variables` devolve `total_count: 0`.
+      Os quatro existem, mas em **`NexusOps_backend`**, com
+      `SONAR_PROJECT_KEY=brunocbarbosa_NexusOps_backend`. Secret e variables não são herdados entre
+      repositórios de uma conta pessoal.
+
+      ```bash
+      gh variable set SONAR_ENABLED      --repo brunocbarbosa/NexusOps_frontend --body 'true'
+      gh variable set SONAR_ORGANIZATION --repo brunocbarbosa/NexusOps_frontend --body 'brunocbarbosa'
+      gh variable set SONAR_PROJECT_KEY  --repo brunocbarbosa/NexusOps_frontend --body 'brunocbarbosa_NexusOps_frontend'
+      gh secret   set SONAR_TOKEN        --repo brunocbarbosa/NexusOps_frontend   # pede o valor
+      ```
+
+      > **Cuidado:** um job pulado por `if` reporta conclusão *skipped*, e o GitHub conta *skipped*
+      > como satisfeito num check obrigatório. Sem `SONAR_ENABLED=true`, o check `sonar` passa **sem
+      > analisar nada** — verde por ausência, não por qualidade.
+
+- [ ] **Ligar o Dependency graph.** Medido: o job `dependency-review` falha com
+      `Dependency review is not supported on this repository`, e
+      `repos/.../vulnerability-alerts` responde 404 (*Vulnerability alerts are disabled*).
+
+      ```bash
+      gh api --method PUT repos/brunocbarbosa/NexusOps_frontend/vulnerability-alerts
+      gh api --method PUT repos/brunocbarbosa/NexusOps_frontend/automated-security-fixes
+      ```
+
+      O primeiro liga o grafo de dependências e os alertas do Dependabot; o segundo liga as
+      correções automáticas de segurança. O `dependabot.yml` deste PR cuida das atualizações de
+      versão, que são independentes disso.
+
+---
+
 ## Passos manuais no SonarCloud
 
 Nenhum é automatizável, e cada um falha de um jeito que não se parece com a causa.
@@ -109,3 +146,6 @@ Divergências entre o que a spec previu e o que a execução exigiu.
 | 2026-08-22 | 4 | `actions/attest-build-provenance@v4`, não v3 | v4.2.2 é a release atual; v3 não é mais mantida. |
 | 2026-08-22 | 4 | `actions/download-artifact@v8`, não v7 | O `download-artifact` não acompanha o `upload-artifact` em lockstep: v8.0.1 contra v7.0.1. |
 | 2026-08-22 | 5 | `dependency-review` **fora** dos checks obrigatórios do ruleset | Só roda em evento de `pull_request`. Como check obrigatório, deixaria todo push de merge pendente para sempre. |
+| 2026-08-22 | 1 | `typecheck` virou `next typegen && tsc --noEmit`, não só `tsc --noEmit` | Falhou no PR #1 com `TS2304: Cannot find name 'LayoutProps'`. O tipo é gerado pelo Next em `.next/types`, e `next-env.d.ts` é ignorado no git: na máquina os dois existem porque `dev`/`build` já rodaram, num clone limpo não. O script dependia em silêncio de um build que ninguém pediu. |
+| 2026-08-22 | 3 | Dependency graph precisou ser ligado à mão | Não vinha ligado neste repositório, apesar de público. O job falha com `Dependency review is not supported on this repository` até isso ser feito. |
+| 2026-08-22 | 2 | Secret e variables do Sonar não estavam neste repositório | Estavam em `NexusOps_backend`, com a chave de projeto do backend. Descoberto porque o job `sonar` apareceu como *skipping* no PR #1. |
