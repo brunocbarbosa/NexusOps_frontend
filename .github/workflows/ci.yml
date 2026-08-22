@@ -1,0 +1,178 @@
+# Gate de qualidade. Roda nos PRs para `development` e `main` e nos pushes das
+# duas branches — o push acontece por merge de PR, e reanalisar a branch de
+# destino é o que mantém a visão de "New Code" do SonarCloud correta.
+name: CI
+
+on:
+  pull_request:
+    branches: [development, main]
+  push:
+    branches: [development, main]
+  workflow_dispatch:
+
+# Push novo na mesma ref cancela a execução anterior. PRs e branches recebem
+# grupos distintos para que um push na branch não derrube o check do PR.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # A política do CLAUDE.md em código executável: `main` é linha de release e
+  # só recebe `development`. Ruleset do GitHub restringe QUEM faz merge e QUAIS
+  # checks precisam passar, mas não sabe expressar "a head branch precisa ser
+  # esta" — daí a checagem viver aqui.
+  branch-policy:
+    name: branch-policy
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check base and head branches
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          echo "PR: $HEAD -> $BASE"
+          if [ "$BASE" = "main" ] && [ "$HEAD" != "development" ]; then
+            echo "::error::main so recebe PR vindo de development (este veio de '$HEAD')."
+            echo "Abra o PR contra development; a promocao para main sai de la."
+            exit 1
+          fi
+          if [ "$BASE" = "development" ] && [ "$HEAD" = "main" ]; then
+            echo "::error::PR de main para development inverte o fluxo de release."
+            exit 1
+          fi
+          echo "Fluxo de branches OK."
+
+  # O hook `commit-msg` local roda commitlint, mas hook local se contorna com
+  # --no-verify. Na CI, não.
+  commits:
+    name: commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # commitlint precisa do intervalo inteiro do PR, não só do HEAD.
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Lint commit messages
+        uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: commitlint.config.mjs
+
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests with coverage
+        run: npm run test:coverage
+
+      # O job `sonar` consome este artefato em vez de rodar a suíte de novo.
+      - name: Upload coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 7
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      # Passo próprio, e não parte do teste: assim uma falha de build se
+      # apresenta como falha de build, e não disfarçada de teste vermelho.
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # playwright.config.ts sobe o artefato standalone por conta própria
+      # (webServer), na porta 3100.
+      - name: E2E
+        run: npm run e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  sonar:
+    name: sonar
+    needs: quality
+    # SONAR_ENABLED é o interruptor: sem ele, um fork ou um período sem token
+    # deixaria o gate vermelho por falta de credencial, não por falta de
+    # qualidade. Fork não enxerga secrets, então também fica de fora.
+    if: >-
+      vars.SONAR_ENABLED == 'true' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Sem o histórico completo o Sonar não consegue atribuir "New Code"
+          # nem datar as linhas; a análise sai, mas o gate mede a coisa errada.
+          fetch-depth: 0
+
+      - name: Download coverage
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage
+          path: coverage
+
+      # Organização e chave vêm das variables do repositório, não do
+      # sonar-project.properties: um fork roda sem editar arquivo nenhum.
+      - name: SonarQube Cloud scan
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+
+      # O scan apenas envia o relatório; quem reprova é o Quality Gate. Sem
+      # este passo o job fica verde mesmo com o gate vermelho, e o bloqueio
+      # dependeria do GitHub App do Sonar estar instalado.
+      - name: Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          scanMetadataReportFile: .scannerwork/report-task.txt
