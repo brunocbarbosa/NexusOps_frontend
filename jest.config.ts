@@ -16,6 +16,12 @@ const config: Config = {
     "!src/**/*.d.ts",
     "!src/**/*.test.{ts,tsx}",
     "!src/test/**",
+    // Espelha sonar.exclusions. O shadcn reescreve estes arquivos a cada
+    // `shadcn add`, então eles ficam fora da análise — e um arquivo que está
+    // no lcov mas não na análise faz o scanner avisar
+    // `Could not resolve 1 file paths`, ruído permanente que esconderia um
+    // descasamento de caminho de verdade no dia em que houver um.
+    "!src/components/ui/**",
   ],
   // `lcov` hoje é default do Jest, mas o gate do Sonar depende do arquivo
   // coverage/lcov.info existir. Declarar explicitamente impede que uma troca
