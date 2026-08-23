@@ -14,7 +14,7 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
 | `npm run dev` | servidor de desenvolvimento |
 | `npm run build` | build de produção; emite `.next/standalone/` |
 | `npm run start:standalone` | sobe o artefato standalone (o mesmo que a imagem Docker roda) |
-| `npm run lint` | ESLint, com regras que usam informação de tipo |
+| `npm run lint` | `next typegen && eslint` — regras que usam informação de tipo |
 | `npm test` | Jest + RTL |
 | `npm test -- <caminho>` | **um único arquivo de teste** |
 | `npm run test:watch` | Jest em watch |
@@ -69,6 +69,13 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
 - **`fetch-depth: 0` nos jobs `sonar` e `secrets` não é otimização.** Sem o histórico completo o
   Sonar não data as linhas e mede "New Code" errado, e o gitleaks não enxerga o commit onde o
   segredo realmente entrou.
+- **`npm run lint` roda `next typegen` antes do ESLint, e isso não é enfeite.** `PageProps<>` e
+  `RouteContext<>` são **tipos gerados** em `.next/types/`, e `next-env.d.ts` é gitignored. Num
+  checkout limpo — a CI, um `git clone` — eles não existem, e as regras com informação de tipo veem
+  `error typed value` em vez do tipo: o job `quality` reprovou com 17 erros num código que passava na
+  máquina, porque ali um `next dev` mantinha `.next/dev/types` atualizado. Reproduzir isso localmente
+  exige um checkout sem `.next` (`git worktree add --detach`), não só apagar a pasta com o dev server
+  no ar.
 - **Renovação de sessão: compartilhar o voo em andamento não basta.** Duas requisições disparadas
   juntas pelo browser chegam escalonadas ao servidor, e a segunda ainda carrega o cookie antigo — o
   `Set-Cookie` da primeira não voltou. Reapresentar um refresh token gasto faz o backend revogar a
