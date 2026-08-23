@@ -161,12 +161,16 @@ curl -X POST http://localhost:3000/auth/register -H 'content-type: application/j
 ```
 
 O E2E do Playwright não precisa do backend: `e2e/support/fake-api.mjs` é um stub HTTP do NestJS que
-sobe como segundo `webServer` e serve os mesmos formatos de resposta e de erro.
+sobe como segundo `webServer` e serve os mesmos formatos de resposta e de erro. Ele **rotaciona o
+refresh token e revoga a família inteira em caso de reuso**, como o original — sem isso, o problema
+do §3.2 não seria reproduzível fora da API real, e é o que sustenta o teste das cinco requisições
+concorrentes.
 
 Duas asserções que são o ponto da fatia: **nenhum token aparece em `document.cookie`**, e nenhuma
 resposta de `/api/*` carrega `accessToken`.
 
-E uma que **precisa** da API real, porque nenhum dublê a reproduz: apagar o cookie de access,
-disparar cinco requisições ao mesmo tempo e conferir que as cinco respondem 200, que o refresh token
-foi rotacionado e que `GET /auth/me` continua valendo. É esse roteiro que reprovou a primeira versão
-do §3.2.
+E uma que nasceu na API real e hoje roda na CI: apagar o cookie de access, disparar cinco
+requisições ao mesmo tempo e conferir que as cinco respondem 200 e que `GET /auth/me` continua
+valendo. Foi o roteiro manual que reprovou a primeira versão do §3.2; depois que o dublê ganhou
+rotação e detecção de reuso, o caso virou spec do Playwright — verificada nos dois sentidos, com e
+sem a janela de tolerância.

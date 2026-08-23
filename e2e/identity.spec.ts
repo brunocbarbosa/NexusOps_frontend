@@ -138,6 +138,33 @@ test("o 409 de desativar a si mesmo aparece sem fechar o diálogo", async ({ pag
   );
 });
 
+test("token expirado: cinco requisições concorrentes não derrubam a sessão", async ({
+  page,
+  context,
+}) => {
+  // O dublê rotaciona o refresh token e revoga a família inteira em caso de
+  // reuso, como o backend real. Sem a janela de tolerância do `refresh.ts`,
+  // uma destas cinco passa e as outras quatro tomam 401 — e a sessão morre.
+  await signIn(page);
+
+  await context.clearCookies({ name: "nexusops_at" });
+
+  const statuses = await page.evaluate(() =>
+    Promise.all(
+      Array.from({ length: 5 }, () =>
+        fetch("/api/users?page=1&perPage=20").then((response) => response.status),
+      ),
+    ),
+  );
+
+  expect(statuses).toEqual([200, 200, 200, 200, 200]);
+
+  const session = await page.evaluate(() =>
+    fetch("/api/auth/me").then((response) => response.status),
+  );
+  expect(session).toBe(200);
+});
+
 test("sair encerra a sessão e volta ao login", async ({ page, context }) => {
   await signIn(page);
 

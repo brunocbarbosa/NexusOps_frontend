@@ -25,8 +25,21 @@ const ADMIN = {
 
 let users = [];
 let nextId = 0;
+let issued = 0;
+
+/**
+ * Sessões vivas. O dublê guarda os tokens que emitiu porque a rotação e a
+ * detecção de reuso são justamente o que o frontend tem de acertar: apresentar
+ * um refresh token já gasto derruba **todas** as sessões do usuário, e foi
+ * assim que a primeira versão do cliente derrubava a sessão de quem navegava.
+ */
+const liveAccessTokens = new Set();
+const liveRefreshTokens = new Set();
 
 function reset() {
+  liveAccessTokens.clear();
+  liveRefreshTokens.clear();
+  issued = 0;
   users = [
     { ...ADMIN },
     {
@@ -69,17 +82,22 @@ function fail(response, status, message, error) {
 }
 
 function authResult(user) {
-  return {
-    accessToken: `access-token-for-${user.id}`,
-    refreshToken: `refresh-token-for-${user.id}`,
-    user,
-  };
+  issued += 1;
+
+  const accessToken = `access-${issued}-${user.id}`;
+  const refreshToken = `refresh-${issued}-${user.id}`;
+
+  liveAccessTokens.add(accessToken);
+  liveRefreshTokens.add(refreshToken);
+
+  return { accessToken, refreshToken, user };
 }
 
 function authenticated(request) {
   const header = request.headers.authorization ?? "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
 
-  return header.startsWith("Bearer access-token-for-") ? ADMIN : null;
+  return liveAccessTokens.has(token) ? ADMIN : null;
 }
 
 function readBody(request) {
@@ -127,12 +145,25 @@ const server = createServer((request, response) => {
     }
 
     if (pathname === "/auth/refresh" && method === "POST") {
-      return body.refreshToken
-        ? send(response, 200, authResult(ADMIN))
-        : fail(response, 401, "Invalid refresh token", "Unauthorized");
+      const presented = String(body.refreshToken ?? "");
+
+      if (!liveRefreshTokens.has(presented)) {
+        // Reuso: quem tinha esse token já o gastou, e daqui não dá para saber
+        // qual das duas partes é a legítima. O backend real revoga a família
+        // inteira, e é essa consequência que o frontend precisa evitar.
+        liveRefreshTokens.clear();
+        liveAccessTokens.clear();
+        return fail(response, 401, "Invalid refresh token", "Unauthorized");
+      }
+
+      // Rotação: o token apresentado morre aqui.
+      liveRefreshTokens.delete(presented);
+
+      return send(response, 200, authResult(ADMIN));
     }
 
     if (pathname === "/auth/logout" && method === "POST") {
+      liveRefreshTokens.delete(String(body.refreshToken ?? ""));
       return send(response, 204);
     }
 
@@ -238,9 +269,13 @@ const server = createServer((request, response) => {
     }
 
     if (pathname === "/users/me/password" && method === "PATCH") {
-      return body.currentPassword === PASSWORD
-        ? send(response, 204)
-        : fail(response, 401, "The current password is incorrect", "Unauthorized");
+      if (body.currentPassword !== PASSWORD) {
+        return fail(response, 401, "The current password is incorrect", "Unauthorized");
+      }
+
+      // Trocar a senha encerra todas as sessões, como no backend real.
+      liveRefreshTokens.clear();
+      return send(response, 204);
     }
 
     return fail(response, 404, `Cannot ${method} ${pathname}`, "Not Found");
