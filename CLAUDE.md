@@ -45,16 +45,28 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
 - **O `sonarqube-scan-action` sai com 0 mesmo quando o Quality Gate reprova** — ele só envia o
   relatório. Quem reprova é o passo `sonarqube-quality-gate-action` logo depois. Remover esse passo
   deixa o gate verde para sempre.
-- **O SonarCloud desta organização só analisa a branch principal e os PRs.** Medido: a leitura do
-  Quality Gate com `branch=development` responde **403** com
-  `Organization is not allowed to access data from non main branches`, enquanto `branch=main` e
-  `pullRequest=N` respondem 200. Por isso o job `sonar` só roda em PR e no push de `main` — analisar
-  `development` geraria um scan ilegível e um gate que nunca passa. Nada se perde: o commit que
-  chega em `development` é o mesmo que já passou pelo gate no PR.
+- **O SonarCloud desta organização só serve dados da branch principal do projeto — que lá é a
+  `development`, não a `main`.** Foi configurada assim de propósito: `development` é o alvo de todo
+  PR de feature, e é o recorte que precisa ser legível. Duas mensagens de recusa, ambas chegando
+  como o mesmo `curl: (22) The requested URL returned error: 403` no passo do Quality Gate, com o
+  scan tendo passado — só o corpo da resposta distingue:
 
-  O erro engana: chega como `curl: (22) The requested URL returned error: 403` no passo do gate,
-  com o scan tendo passado. **Não é tipo de branch** — reclassificar `development` de `SHORT` para
-  `LONG` não muda nada. Só o corpo da resposta diz a verdade.
+  - `Organization is not allowed to access data from non main branches`
+  - `Organization is not allowed to access data from PR targeting non main branches`
+
+  Por isso o job `sonar` roda **só em PR para `development` e no push de `development`**, e o
+  ruleset de `main` **não** exige `sonar` — exigir um check que sempre pula é pedir verde por
+  ausência. O PR de release `development → main` fica sem gate de propósito: ele carrega código que
+  já passou pelo gate ao entrar em `development`.
+
+  Três becos sem saída já percorridos, para ninguém repetir: **não é tipo de branch** (reclassificar
+  `development` de `SHORT` para `LONG` não muda nada); **não adianta forçar
+  `-Dsonar.pullrequest.base`** (o SonarCloud lê o alvo pela integração com o GitHub e ignora o
+  parâmetro — e informá-lo ainda desliga a auto-configuração, quebrando o scan com
+  `Parameter 'sonar.pullrequest.key' is mandatory`); e **não confie em PR antigo que passou** (os
+  #1 e #3 passaram porque `development` ainda não existia no SonarCloud e o scanner caía para `main`
+  sozinho).
+
 - **`fetch-depth: 0` nos jobs `sonar` e `secrets` não é otimização.** Sem o histórico completo o
   Sonar não data as linhas e mede "New Code" errado, e o gitleaks não enxerga o commit onde o
   segredo realmente entrou.
@@ -85,9 +97,11 @@ O design que originou este scaffold está em
 - Parta de `development` para qualquer feature ou correção — nunca de `main`.
 - **`main` só recebe código vindo de `development`**, nunca commits diretos e nunca merge de uma
   branch de feature. `main` é a linha de release.
-- Isto é **exigido**, não combinado: o job `branch-policy` da CI reprova PR para `main` vindo de
-  outra branch, e `scripts/setup-branch-rulesets.sh` aplica os rulesets que exigem PR e checks
-  verdes nas duas branches. Ruleset do GitHub não sabe expressar "a head branch precisa ser
+- Isto é **exigido**, não combinado, desde 2026-08-22: o job `branch-policy` da CI reprova PR para
+  `main` vindo de outra branch, e os rulesets aplicados por `scripts/setup-branch-rulesets.sh`
+  recusam push direto nas duas branches (`GH013: Repository rule violations found`). Conferir com
+  `gh api repos/brunocbarbosa/NexusOps_frontend/rules/branches/main` — o endpoint legado
+  `branches/main/protection` **não** enxerga ruleset e responde 404 mesmo com tudo ativo. Ruleset do GitHub não sabe expressar "a head branch precisa ser
   `development`" — por isso a regra vive nos dois lugares, e precisa dos dois.
 - O `.claude/` é versionado neste repositório: skills e agents foram ajustados à stack decidida aqui,
   então reinstalá-los via `npx claude-code-templates` sobrescreve as customizações. Veja o commit

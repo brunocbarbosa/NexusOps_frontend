@@ -191,10 +191,11 @@ the `branch-policy` job, and `scripts/setup-branch-rulesets.sh` makes it a requi
 piece is sufficient alone.
 
 `sonar` waits on the SonarCloud Quality Gate instead of trusting the scan's exit code: the scan only
-uploads the report and exits 0 even when the gate fails. It runs on pull requests and on pushes to
-`main`, but not on pushes to `development` — this organization's SonarCloud plan answers 403 for any
-branch that is not the main one, and the commit landing on `development` is the same one the PR gate
-already cleared.
+uploads the report and exits 0 even when the gate fails. It runs on pull requests into `development` and on
+pushes to `development`, and nowhere else: this organization's SonarCloud plan serves only the
+project's main branch, and that branch is `development` — where every feature PR lands. The release
+PR into `main` goes ungated on purpose, carrying code the gate already cleared on its way into
+`development`.
 
 ---
 

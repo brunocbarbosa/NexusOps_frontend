@@ -158,20 +158,25 @@ jobs:
     # deixaria o gate vermelho por falta de credencial, não por falta de
     # qualidade. Fork não enxerga secrets, então também fica de fora.
     #
-    # E o push só analisa `main`. O plano da organização no SonarCloud não dá
-    # acesso a branch que não seja a principal — medido: a leitura do gate com
-    # `branch=development` responde 403 com
-    # `Organization is not allowed to access data from non main branches`,
-    # enquanto `branch=main` e `pullRequest=N` respondem 200. Analisar
-    # `development` produziria um scan que ninguém pode ler e um gate que nunca
-    # passa. Nada se perde: todo commit que chega em `development` passou pelo
-    # gate no PR, que é o mesmo commit.
+    # E o push só analisa `development`, que é a branch principal do projeto no
+    # SonarCloud. O plano da organização não serve dados de nenhuma outra:
+    #   branch=<outra>   -> Organization is not allowed to access data from non main branches
+    #   PR mirando outra -> Organization is not allowed to access data from PR targeting non main branches
+    #
+    # `development` é a principal lá justamente por isso: é o alvo de todo PR
+    # de feature, então é o recorte que precisa ser legível. O preço é o PR de
+    # release `development -> main` e o push em `main` ficarem sem gate — raros,
+    # e carregando código que já passou pelo gate ao entrar em `development`.
+    #
+    # Não adianta forçar `-Dsonar.pullrequest.base`: o SonarCloud lê o alvo do
+    # PR pela integração com o GitHub e ignora o parâmetro. Foi medido.
     if: >-
       vars.SONAR_ENABLED == 'true' &&
       ((github.event_name == 'pull_request' &&
+        github.base_ref == 'development' &&
         github.event.pull_request.head.repo.full_name == github.repository) ||
        (github.event_name != 'pull_request' &&
-        github.ref == 'refs/heads/main'))
+        github.ref == 'refs/heads/development'))
     # Permissão no job, não no workflow: o escopo default de um job
     # herdado do topo é maior do que o que ele precisa.
     permissions:
