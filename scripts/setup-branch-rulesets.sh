@@ -47,10 +47,10 @@ print(json.dumps([{"context": c.strip()} for c in sys.stdin if c.strip()]))'
 }
 
 ruleset_payload() {
-  local name="$1" branch="$2" linear="$3"; shift 3
-  python3 - "$name" "$branch" "$linear" "$(checks_json "$@")" <<'PY'
+  local name="$1" branch="$2" methods="$3"; shift 3
+  python3 - "$name" "$branch" "$methods" "$(checks_json "$@")" <<'PY'
 import json, sys
-name, branch, linear, checks = sys.argv[1], sys.argv[2], sys.argv[3] == "true", json.loads(sys.argv[4])
+name, branch, methods, checks = sys.argv[1], sys.argv[2], sys.argv[3].split(","), json.loads(sys.argv[4])
 
 rules = [
     {"type": "deletion"},
@@ -65,7 +65,7 @@ rules = [
             "require_code_owner_review": False,
             "require_last_push_approval": False,
             "required_review_thread_resolution": True,
-            "allowed_merge_methods": ["squash", "merge"],
+            "allowed_merge_methods": methods,
         },
     },
     {
@@ -77,9 +77,6 @@ rules = [
         },
     },
 ]
-if linear:
-    rules.append({"type": "required_linear_history"})
-
 print(json.dumps({
     "name": name,
     "target": "branch",
@@ -94,8 +91,8 @@ PY
 }
 
 upsert() {
-  local name="$1" branch="$2" linear="$3" payload id; shift 3
-  payload="$(ruleset_payload "$name" "$branch" "$linear" "$@")"
+  local name="$1" branch="$2" methods="$3" payload id; shift 3
+  payload="$(ruleset_payload "$name" "$branch" "$methods" "$@")"
 
   id="$(gh api "repos/$REPO/rulesets" --jq ".[] | select(.name==\"$name\") | .id" 2>/dev/null || true)"
 
@@ -123,8 +120,22 @@ echo "Repositório: $REPO"
 $APPLY || echo "(simulação — rode com --apply para valer)"
 echo
 
-upsert "development" "development" false "${CHECKS_DEVELOPMENT[@]}"
-upsert "main"        "main"        true  "${CHECKS_MAIN[@]}"
+# `development` aceita squash de branch de feature — colapsar o vaivém de um PR
+# num commit só é ganho de leitura, e a branch de feature morre em seguida.
+upsert "development" "development" "squash,merge" "${CHECKS_DEVELOPMENT[@]}"
+
+# `main` aceita SÓ merge commit, e não exige histórico linear. Isto foi medido,
+# não escolhido por gosto: `development` e `main` são as duas de vida longa, e
+# squash entre branches de vida longa quebra a ancestralidade — o commit
+# esmagado não existe em `development`, então o release seguinte tenta remergear
+# os mesmos commits e conflita. Simulado nos 34 commits do primeiro release:
+#
+#   squash        -> main deixa de ser ancestral, 34 commits somem do histórico
+#   merge commit  -> development fica contido em main, histórico intacto
+#
+# `required_linear_history` proíbe exatamente o merge commit de que este fluxo
+# depende, e por isso saiu.
+upsert "main"        "main"        "merge"        "${CHECKS_MAIN[@]}"
 
 if $APPLY; then
   echo

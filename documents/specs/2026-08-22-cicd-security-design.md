@@ -46,14 +46,31 @@ encontraria.
 
 ### 3.2 A política de branches vive em dois lugares, e precisa dos dois
 
-Ruleset do GitHub sabe exigir PR, checks verdes e histórico linear. Não sabe dizer *de qual branch* o
+Ruleset do GitHub sabe exigir PR e checks verdes. Não sabe dizer *de qual branch* o
 PR pode vir. A regra "`main` só recebe `development`" fica então no job `branch-policy`, que lê
 `github.base_ref` e `github.head_ref` e reprova o resto — e o ruleset a torna obrigatória.
 
 Nenhum dos dois sozinho basta: só o job, e um push direto em `main` ignora a CI; só o ruleset, e um PR
 de `feature/x` direto para `main` passa.
 
-### 3.3 Aprovação obrigatória em zero, não em um
+### 3.3 `main` fecha com merge commit, e não com squash
+
+**Correção de 2026-08-23 a esta spec.** A versão original previa histórico linear obrigatório em
+`main`. A simulação do primeiro release mostrou que era erro: `development` e `main` são as duas de
+vida longa, e squash entre branches de vida longa quebra a ancestralidade — o commit esmagado não
+existe em `development`, então o release seguinte tenta remergear os mesmos commits.
+
+Medido sobre os 34 commits do primeiro release:
+
+| Método | `main` continua ancestral | Efeito |
+| --- | --- | --- |
+| squash | não | os 34 commits somem do histórico de `main` |
+| merge commit | não, mas `development` fica **contido** em `main` | histórico compartilhado intacto |
+
+`required_linear_history` proíbe exatamente o merge commit de que o fluxo depende, e por isso saiu do
+ruleset. `main` passou a aceitar **só** `merge`, para que ninguém possa esmagar por engano.
+
+### 3.4 Aprovação obrigatória em zero, não em um
 
 `required_approving_review_count: 0`. O GitHub não deixa o autor aprovar o próprio PR, e o projeto tem
 um mantenedor. Exigir uma aprovação trancaria todo merge sem acrescentar revisor nenhum. O que segura

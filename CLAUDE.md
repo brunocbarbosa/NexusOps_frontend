@@ -102,10 +102,16 @@ O design que originou este scaffold está em
 - **`main` só recebe código vindo de `development`**, nunca commits diretos e nunca merge de uma
   branch de feature. `main` é a linha de release.
 - Isto é **exigido**, não combinado, desde 2026-08-22. A regra vive em dois lugares porque precisa
-  dos dois: o ruleset do GitHub sabe exigir PR, checks verdes e histórico linear, mas **não sabe
-  dizer de qual branch o PR pode vir** — essa metade é o job `branch-policy` da CI, que reprova PR
+  dos dois: o ruleset do GitHub sabe exigir PR e checks verdes, mas **não sabe dizer de qual branch
+  o PR pode vir** — essa metade é o job `branch-policy` da CI, que reprova PR
   para `main` vindo de outra branch. Os rulesets aplicados por `scripts/setup-branch-rulesets.sh`
   recusam push direto nas duas (`GH013: Repository rule violations found`).
+- **O PR de release `development → main` fecha com *merge commit*, nunca com squash.** As duas são
+  branches de vida longa, e squash entre elas quebra a ancestralidade: o commit esmagado não existe
+  em `development`, então o release seguinte tenta remergear os mesmos commits e conflita. Medido nos
+  34 commits do primeiro release — squash tira `main` da linha de ancestralidade e some com os 34 do
+  histórico; merge commit deixa `development` contido em `main`, intacto. O ruleset de `main` aceita
+  só `merge` por isso, e **não** exige histórico linear, que proibiria exatamente esse merge.
 - **Para conferir o ruleset, use `gh api repos/<owner>/<repo>/rules/branches/<branch>`.** O endpoint
   legado `branches/<branch>/protection` só enxerga *branch protection* clássica e responde 404 mesmo
   com ruleset ativo e recusando push — daria falso negativo numa configuração que funciona.
