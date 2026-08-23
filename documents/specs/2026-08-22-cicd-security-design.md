@@ -18,7 +18,7 @@ sem passar por PR verde, e todo merge em `main` publica uma imagem.
 | PR para `development` | `quality`, `e2e`, `sonar`, `commits`, `branch-policy`, `codeql`, `dependency-review`, `audit`, `secrets` verdes |
 | PR de branch qualquer direto para `main` | **reprovado** pelo job `branch-policy` |
 | `docker build` | imagem sobe, `/api/health` responde, CSS responde 200 |
-| Merge em `main` | `ghcr.io/brunocbarbosa/nexusops_frontend:latest` publicada |
+| Merge em `main` | `ghcr.io/brunocbarbosa/nexusops_frontend:latest` publicada — **único critério ainda não exercitado** em 2026-08-23: nenhum merge de release aconteceu |
 | `gh api .../rules/branches/main` | lista as regras ativas (o endpoint legado `branches/main/protection` **não** enxerga ruleset e responde 404 mesmo funcionando) |
 
 ## 2. Estado encontrado

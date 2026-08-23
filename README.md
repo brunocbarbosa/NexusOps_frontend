@@ -284,7 +284,9 @@ Project documentation is written in Portuguese; the code and its comments are in
 - [ ] Assets — inventory of notebooks and licenses
 - [ ] Async reports — `202 Accepted` plus SSE/WebSocket completion notice
 - [ ] Tests — Jest + RTL unit tier, Playwright critical flows
-- [x] CI/CD — quality gate, SonarCloud, security scanning, Docker image published to GHCR
+- [x] CI/CD — quality gate, SonarCloud, security scanning, branch rulesets
+- [ ] Release — the GHCR publish workflow exists and the image is verified locally, but no
+      `development → main` merge has run it yet
 
 ---
 
