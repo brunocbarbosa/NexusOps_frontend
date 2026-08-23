@@ -186,7 +186,7 @@ so a workflow triggered only by push would never find it.
 
 **The branch policy is enforced, not agreed.** `development` is the working branch and `main` only
 takes `development`, both through PRs with green checks. A GitHub ruleset can require a PR, the
-checks and linear history — it cannot say *which* branch a PR may come from, so that half lives in
+checks — it cannot say *which* branch a PR may come from, so that half lives in
 the `branch-policy` job, and `scripts/setup-branch-rulesets.sh` makes it a required check. Neither
 piece is sufficient alone.
 

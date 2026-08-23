@@ -560,7 +560,14 @@ direto em `main` funcionava normalmente.
 | Checks obrigatórios | 8 | 7 |
 | Force push | bloqueado | bloqueado |
 | Deletar a branch | bloqueado | bloqueado |
-| Histórico linear | — | sim |
+| Métodos de merge | squash ou merge commit | **só** merge commit |
+
+> **Por que `main` não aceita squash.** As duas são branches de vida longa. Squash colapsa os commits
+> num commit novo, que **não existe** em `development` — a ancestralidade se rompe e o release
+> seguinte tenta remergear tudo de novo. Medido nos 34 commits do primeiro release: com squash,
+> `main` deixa de ser ancestral e os 34 somem do histórico; com merge commit, `development` fica
+> contido em `main` e o histórico continua íntegro. Por isso o ruleset de `main` também **não** exige
+> histórico linear: essa regra proibiria justamente o merge commit de que o fluxo depende.
 
 Testado por comportamento, não por existência:
 
