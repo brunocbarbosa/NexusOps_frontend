@@ -44,6 +44,13 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: eslint
         update-types: ["version-update:semver-major"]
+      # O major de @types/node acompanha o major do Node, não o calendário do
+      # npm: tipos à frente do runtime fazem o TypeScript aceitar API que o
+      # Node do `.nvmrc` não tem, e nada reprova — o erro só aparece em
+      # produção. Quem manda aqui é o `.nvmrc`, então o major sobe junto com
+      # ele, na mão.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
