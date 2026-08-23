@@ -38,7 +38,6 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
   `eslint-plugin-jsx-a11y` não suportam o ESLint 10 em nenhuma versão publicada.
 - **Os hooks de commit são reais**: `pre-commit` roda lint, `commit-msg` roda Commitlint
   (Conventional Commits). Mensagem fora do padrão é rejeitada.
-
 - **Automatic Analysis do SonarCloud precisa estar DESLIGADA.** Com ela ligada, o job `sonar` morre
   com `You are running CI analysis while Automatic Analysis is enabled`. É o erro mais provável de
   aparecer na primeira execução da pipeline.
@@ -78,9 +77,14 @@ Scaffold pronto e verificado: Next 16 (App Router, `src/`, `output: standalone`)
 estrito, Tailwind 4 + shadcn/ui (base Radix, preset nova), TanStack Query/Table/Virtual, Jest + RTL,
 Playwright, Husky + Commitlint.
 
-Pipeline pronta: GitHub Actions em três workflows (`CI`, `Security`, `Release`), SonarCloud com
-Quality Gate bloqueante, CodeQL, Dependency Review, `npm audit`, gitleaks, Dependabot e imagem Docker
-publicada no GHCR a cada merge em `main`.
+Pipeline pronta e exercitada num PR real: GitHub Actions em três workflows (`CI`, `Security`,
+`Release`), SonarCloud com Quality Gate que reprova o job, CodeQL, Dependency Review, `npm audit`,
+gitleaks e Dependabot. Os rulesets das duas branches estão aplicados e recusam push direto.
+
+**O `Release` ainda não rodou.** Ele dispara no push de `main`, e nenhum merge `development → main`
+aconteceu até agora — a imagem foi construída e validada localmente (67 MB, uid 1001, `/api/health`
+respondendo, CSS servido com 200), mas nunca publicada no GHCR. O primeiro merge de release é o que
+prova essa metade.
 
 **Ainda não existe**: nenhuma tela de produto e nenhum cliente de API. O único Route Handler é
 `src/app/api/health/route.ts`, que serve ao `HEALTHCHECK` da imagem e não toca no backend — o
@@ -97,12 +101,14 @@ O design que originou este scaffold está em
 - Parta de `development` para qualquer feature ou correção — nunca de `main`.
 - **`main` só recebe código vindo de `development`**, nunca commits diretos e nunca merge de uma
   branch de feature. `main` é a linha de release.
-- Isto é **exigido**, não combinado, desde 2026-08-22: o job `branch-policy` da CI reprova PR para
-  `main` vindo de outra branch, e os rulesets aplicados por `scripts/setup-branch-rulesets.sh`
-  recusam push direto nas duas branches (`GH013: Repository rule violations found`). Conferir com
-  `gh api repos/brunocbarbosa/NexusOps_frontend/rules/branches/main` — o endpoint legado
-  `branches/main/protection` **não** enxerga ruleset e responde 404 mesmo com tudo ativo. Ruleset do GitHub não sabe expressar "a head branch precisa ser
-  `development`" — por isso a regra vive nos dois lugares, e precisa dos dois.
+- Isto é **exigido**, não combinado, desde 2026-08-22. A regra vive em dois lugares porque precisa
+  dos dois: o ruleset do GitHub sabe exigir PR, checks verdes e histórico linear, mas **não sabe
+  dizer de qual branch o PR pode vir** — essa metade é o job `branch-policy` da CI, que reprova PR
+  para `main` vindo de outra branch. Os rulesets aplicados por `scripts/setup-branch-rulesets.sh`
+  recusam push direto nas duas (`GH013: Repository rule violations found`).
+- **Para conferir o ruleset, use `gh api repos/<owner>/<repo>/rules/branches/<branch>`.** O endpoint
+  legado `branches/<branch>/protection` só enxerga *branch protection* clássica e responde 404 mesmo
+  com ruleset ativo e recusando push — daria falso negativo numa configuração que funciona.
 - O `.claude/` é versionado neste repositório: skills e agents foram ajustados à stack decidida aqui,
   então reinstalá-los via `npx claude-code-templates` sobrescreve as customizações. Veja o commit
   `f3a3938` para o que foi removido e por quê.
