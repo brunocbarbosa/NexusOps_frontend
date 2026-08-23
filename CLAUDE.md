@@ -21,7 +21,7 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
 | `npm run test:coverage` | cobertura |
 | `npm run e2e` | Playwright contra o build standalone |
 | `npm run e2e:ui` | Playwright em modo interativo |
-| `npm run typecheck` | `tsc --noEmit` isolado |
+| `npm run typecheck` | `next typegen && tsc --noEmit` |
 | `docker build -t nexusops-frontend .` | mesma imagem que a CI publica no GHCR |
 | `bash scripts/setup-branch-rulesets.sh` | simula a política de branches no GitHub (`--apply` aplica) |
 
@@ -69,7 +69,22 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
 - **`fetch-depth: 0` nos jobs `sonar` e `secrets` não é otimização.** Sem o histórico completo o
   Sonar não data as linhas e mede "New Code" errado, e o gitleaks não enxerga o commit onde o
   segredo realmente entrou.
-- **`e2e` e `e2e:ui` são os nomes dos scripts**, não `test:e2e`.
+- **Renovação de sessão: compartilhar o voo em andamento não basta.** Duas requisições disparadas
+  juntas pelo browser chegam escalonadas ao servidor, e a segunda ainda carrega o cookie antigo — o
+  `Set-Cookie` da primeira não voltou. Reapresentar um refresh token gasto faz o backend revogar a
+  família inteira e derrubar a sessão. Por isso `src/lib/api/refresh.ts` **lembra** do par por 30
+  segundos, e não só enquanto a renovação corre. Medido contra o backend real: sem a janela, de
+  cinco requisições concorrentes uma passa e quatro tomam 401.
+- **`e2e` e `e2e:ui` são os nomes dos scripts**, não `test:e2e`. O Playwright sobe **dois**
+  servidores: o artefato standalone e `e2e/support/fake-api.mjs`, um dublê do NestJS — a suíte E2E
+  não precisa do backend, do Postgres nem do Redis.
+- **O backend também escuta na 3000.** Em desenvolvimento, backend em 3000 e Next em 3001
+  (`PORT=3001 npm run dev`), com `NEXUSOPS_API_URL=http://localhost:3000` (ver `.env.example`).
+- **O TanStack Table 9 é ESM puro.** Ele está em `transpilePackages` no `next.config.ts`; sem isso
+  todo teste que renderize a grid morre com `Cannot use import statement outside a module`.
+- **O jsdom não tem `TextEncoder` nem a Fetch API.** O `src/test/setup.ts` preenche o primeiro;
+  testes de Route Handler declaram `@jest-environment node`, e testes de componente usam os dublês
+  de `src/test/http.ts`.
 
 ## Estado do repositório
 
@@ -86,10 +101,22 @@ aconteceu até agora — a imagem foi construída e validada localmente (67 MB, 
 respondendo, CSS servido com 200), mas nunca publicada no GHCR. O primeiro merge de release é o que
 prova essa metade.
 
-**Ainda não existe**: nenhuma tela de produto e nenhum cliente de API. O único Route Handler é
-`src/app/api/health/route.ts`, que serve ao `HEALTHCHECK` da imagem e não toca no backend — o
-primeiro Route Handler de produto é o proxy de login. `src/app/page.tsx` é página de verificação do
-scaffold, não UI de produto: a primeira tela real substitui o arquivo inteiro.
+**A fatia `identity` está implementada**: login, sessão em cookie `httpOnly`, refresh serializado,
+listagem e administração de usuários, e troca da própria senha. O desenho está em
+[`documents/specs/2026-08-23-identity-login-users-design.md`](./documents/specs/2026-08-23-identity-login-users-design.md).
+
+Duas regras que caíram daí e valem para as próximas telas:
+
+- **Nenhum Server Component busca dado autenticado.** Só Route Handler, Server Action e `proxy.ts`
+  gravam cookie; um RSC que renovasse a sessão gastaria o refresh token sem conseguir persistir o
+  par rotacionado — e reapresentar o antigo revoga a família inteira. Todo dado autenticado passa
+  por um Route Handler e chega à tela pelo TanStack Query.
+- **`src/lib/api/server.ts` é o único lugar que fala com o NestJS autenticado.** Handler que monta a
+  requisição por conta própria pode esquecer o `Bearer`, renovar duas vezes ou vazar o token.
+
+**Ainda não existe**: helpdesk (chamados), ativos e auditoria — nenhuma tela, nenhum Route Handler.
+Não existe tela de cadastro (`POST /auth/register`): o tenant de desenvolvimento nasce por `curl`.
+E **não há CSP**; os cabeçalhos de segurança simples estão em `src/lib/security-headers.ts`.
 
 O design que originou este scaffold está em
 [`documents/specs/2026-08-22-frontend-scaffold-design.md`](./documents/specs/2026-08-22-frontend-scaffold-design.md).
@@ -125,6 +152,7 @@ O design que originou este scaffold está em
 | ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
 | [`documents/MAIN.md`](./documents/MAIN.md)                                | entender o objetivo geral do produto e os diferenciais técnicos    |
 | [`documents/MAIN_FRONTEND.md`](./documents/MAIN_FRONTEND.md)              | qualquer decisão de stack ou estrutura de pastas                  |
+| [`documents/TESTE_MANUAL.md`](./documents/TESTE_MANUAL.md)                | testar as telas na mão: contas do tenant de dev e o que observar  |
 | [`documents/specs/2026-08-22-cicd-security-design.md`](./documents/specs/2026-08-22-cicd-security-design.md) | mexer em workflow, Dockerfile ou política de branches |
 | [`documents/backend/USERS.md`](./documents/backend/USERS.md)              | implementar login, refresh, senhas ou telas de usuários           |
 | [`documents/backend/TENANCY_EXTENSION.md`](./documents/backend/TENANCY_EXTENSION.md) | entender por que a API responde 404 e não 403          |
@@ -206,12 +234,12 @@ Pontos que mudam o desenho das telas — o *porquê* de cada um está em `docume
 
 ## Próximo passo
 
-A fatia de login ponta a ponta, que é o que prova a arquitetura de BFF decidida na spec: formulário
-com `tenantDomain`, Route Handler fazendo proxy para o NestJS, access token em cookie `httpOnly`,
-`middleware.ts` protegendo rotas e refresh serializado no servidor.
+A fatia de helpdesk: listagem de chamados (virtualizada, esta sim), abertura, e o **409 de conflito
+de versão** — a primeira tela em que o controle otimista do backend aparece na UI.
 
-É também onde entram os cabeçalhos de segurança HTTP (CSP, HSTS): CSP com Next exige nonce por
-requisição e pertence ao mesmo middleware, não ao `next.config.ts` isolado.
+Antes ou junto: **CSP com nonce**, que ficou de fora da fatia de login de propósito. O nonce é gerado
+no `proxy.ts` e exige renderização dinâmica em toda página — ver
+`node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`.
 
-O Next 16 traz guias locais diretamente aplicáveis a isso — veja
-`node_modules/next/dist/docs/01-app/02-guides/backend-for-frontend.md` e `.../multi-tenant.md`.
+> **`middleware.ts` não existe mais.** O Next 16 depreciou o arquivo e o renomeou para `proxy.ts`
+> (na raiz de `src/`). A porta de rotas e os cabeçalhos de segurança moram lá.
