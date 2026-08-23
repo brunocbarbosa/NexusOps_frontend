@@ -3,6 +3,8 @@
 import { useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+import { ApiError } from "@/lib/api/errors";
+
 /**
  * Providers globais da aplicação.
  *
@@ -16,6 +18,11 @@ export function Providers({ children }: { children: ReactNode }) {
     () =>
       new QueryClient({
         defaultOptions: {
+          mutations: {
+            // Mutação nunca repete sozinha: criar duas vezes o mesmo usuário,
+            // ou desativar duas vezes, não é reintento, é outro efeito.
+            retry: false,
+          },
           queries: {
             // Sem isto, o cliente refaz no cliente tudo que o servidor já
             // buscou, logo após a hidratação.
@@ -25,12 +32,13 @@ export function Providers({ children }: { children: ReactNode }) {
             // analista deixa aberta o dia inteiro.
             refetchOnWindowFocus: false,
 
-            // Conservador de propósito. A política definitiva depende de
-            // distinguir os erros do backend: 404 (recurso de outro tenant) e
-            // 409 (conflito de versão) nunca devem ser repetidos — repetir um
-            // 409 sobrescreveria a alteração de outro analista. Isso chega
-            // junto com o cliente de API tipado, que dá forma ao erro.
-            retry: 1,
+            // Repetir um erro do cliente não muda a resposta: um 404 (recurso
+            // de outro tenant) segue 404, um 403 segue 403, e repetir um 409
+            // sobrescreveria a alteração de outro analista. Só falha de rede
+            // (status 0) e erro do servidor valem uma segunda tentativa.
+            retry: (failureCount, error) =>
+              failureCount < 1 &&
+              !(error instanceof ApiError && error.status >= 400 && error.status < 500),
           },
         },
       }),

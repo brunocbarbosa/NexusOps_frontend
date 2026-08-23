@@ -133,8 +133,9 @@ jobs:
       - name: Install Playwright browser
         run: npm exec --no --ignore-scripts -- playwright install --with-deps chromium
 
-      # playwright.config.ts sobe o artefato standalone por conta própria
-      # (webServer), na porta 3100.
+      # playwright.config.ts sobe os dois servidores por conta própria
+      # (webServer): o artefato standalone na 3100 e o dublê do backend
+      # (e2e/support/fake-api.mjs) na 3101. A suíte não precisa da API real.
       - name: E2E
         run: npm run e2e
 

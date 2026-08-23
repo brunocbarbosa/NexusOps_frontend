@@ -57,3 +57,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# O `.env*` acima esconderia também o exemplo — que existe justamente para ser lido.
+!.env.example
