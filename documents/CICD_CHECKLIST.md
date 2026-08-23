@@ -30,9 +30,8 @@ Uma tarefa só é marcada depois da verificação passar — não depois do coma
 - [x] `sonar-project.properties` sem `organization`/`projectKey` (vêm das variables)
 - [x] **Verificar:** `actionlint` limpo
 - [x] Commit
-- [!] **Verificar na CI:** PR #1 — `branch-policy`, `commits`, `quality` e `e2e` verdes.
-      `sonar` fica *skipping* até o secret e as variables existirem neste repositório (ver Passos
-      manuais no GitHub).
+- [x] **Verificar na CI:** os cinco jobs verdes no PR #5, com o Quality Gate lido de verdade
+      (`HTTP 200`, status `OK`). No PR #1 o `sonar` ainda ficava *skipping* por falta do secret.
 - [x] **Verificar na CI:** PR #2 (rascunho, aberto e fechado) — `branch-policy` reprovou com
       `main so recebe PR vindo de development (este veio de 'ci/pipeline-cicd-security')`
 
@@ -48,8 +47,8 @@ Uma tarefa só é marcada depois da verificação passar — não depois do coma
 - [x] **Verificar:** `actionlint` limpo
 - [x] **Verificar:** `npm audit` nas duas passadas → 0 vulnerabilidades
 - [x] Commit
-- [!] **Verificar na CI:** PR #1 — `codeql`, `audit` e `secrets` verdes.
-      `dependency-review` falha até o Dependency graph ser ligado (ver Passos manuais no GitHub).
+- [x] **Verificar na CI:** os quatro jobs verdes no PR #5. No PR #1 o `dependency-review` falhava
+      por o Dependency graph estar desligado no repositório.
 
 ## Camada 4 — Docker e release
 
@@ -112,7 +111,7 @@ Uma tarefa só é marcada depois da verificação passar — não depois do coma
 Descobertos rodando o PR #1. Nenhum é automatizável pelo repositório, e os dois deixam um check
 vermelho ou enganosamente verde até serem feitos.
 
-- [ ] **Criar o secret e as variables NESTE repositório.** Medido em 2026-08-22:
+- [x] **Criar o secret e as variables NESTE repositório.** Feito em 2026-08-22. Medido antes:
       `gh api repos/brunocbarbosa/NexusOps_frontend/actions/variables` devolve `total_count: 0`.
       Os quatro existem, mas em **`NexusOps_backend`**, com
       `SONAR_PROJECT_KEY=brunocbarbosa_NexusOps_backend`. Secret e variables não são herdados entre
@@ -129,7 +128,7 @@ vermelho ou enganosamente verde até serem feitos.
       > como satisfeito num check obrigatório. Sem `SONAR_ENABLED=true`, o check `sonar` passa **sem
       > analisar nada** — verde por ausência, não por qualidade.
 
-- [ ] **Ligar o Dependency graph.** Medido: o job `dependency-review` falha com
+- [x] **Ligar o Dependency graph.** Feito em 2026-08-22, junto com os Dependabot alerts e os security updates. Medido antes: o job `dependency-review` falha com
       `Dependency review is not supported on this repository`, e
       `repos/.../vulnerability-alerts` responde 404 (*Vulnerability alerts are disabled*).
 
@@ -148,13 +147,13 @@ vermelho ou enganosamente verde até serem feitos.
 
 Nenhum é automatizável, e cada um falha de um jeito que não se parece com a causa.
 
-- [ ] **Desligar Automatic Analysis** em *Administration → Analysis Method*.
+- [x] **Desligar Automatic Analysis** em *Administration → Analysis Method*. Feito em 2026-08-22.
       Com ela ligada, o job `sonar` morre com `You are running CI analysis while Automatic Analysis
       is enabled`. É o erro mais provável na primeira execução.
-- [ ] **Instalar/autorizar o GitHub App do SonarCloud** no repositório, para a decoração do PR.
+- [x] **Instalar/autorizar o GitHub App do SonarCloud** no repositório, para a decoração do PR.
       O gate já bloqueia sem ele (o passo `sonarqube-quality-gate-action` é quem reprova), mas os
       comentários no PR não aparecem.
-- [ ] **Conferir a New Code definition** do projeto.
+- [x] **Conferir a New Code definition** do projeto.
 - [x] **Confirmar o alcance do plano do SonarCloud.** Medido em 2026-08-22: a organização só dá
       acesso à branch principal e aos PRs.
 
@@ -167,10 +166,19 @@ Nenhum é automatizável, e cada um falha de um jeito que não se parece com a c
       O corpo do 403 é `Organization is not allowed to access data from non main branches`. O job
       `sonar` passou a rodar só em PR e no push de `main`.
 
-- [ ] **Opcional — reverter o padrão de branches de vida longa.** Durante o diagnóstico, o campo
-      *Detection of long lived branches* foi trocado de `(branch|release)-.*` para
-      `(development|branch|release)-?.*`. Isso **não** era a causa do 403 e agora é configuração
-      morta, já que `development` não é mais analisada. Sem efeito colateral em deixar como está.
+- [x] **Tornar `development` a branch principal do projeto.** O plano só serve dados da principal,
+      e com `main` nesse papel todo PR de feature era recusado. O SonarCloud não deixa promover uma
+      branch: o caminho é apagar `development` e **renomear** `main` para `development`. Mesmo
+      arranjo já em uso no projeto do backend.
+
+      ```bash
+      curl -s 'https://sonarcloud.io/api/project_branches/list?project=brunocbarbosa_NexusOps_frontend'
+      # development isMain=True, e mais nada
+      ```
+
+- [ ] **Opcional — o padrão *Detection of long lived branches* ficou em
+      `(development|branch|release)-?.*`.** Trocado durante um diagnóstico que se provou errado, e
+      hoje é configuração morta: o projeto tem uma única branch. Sem efeito colateral em deixar.
 
 ---
 
@@ -198,3 +206,5 @@ Divergências entre o que a spec previu e o que a execução exigiu.
 | 2026-08-22 | 2 | Todo PR força `-Dsonar.pullrequest.base=main` | O plano recusa ler o gate de PR que mire branch fora da principal: `Organization is not allowed to access data from PR targeting non main branches`. Os PRs #1 e #3 passaram por acidente, com `development` ainda inexistente no SonarCloud e o scanner caindo de volta para `main`; assim que uma análise recriou a branch lá, o #4 deu 403. Declarar a base troca o acidente por decisão. |
 | 2026-08-22 | 2 | A branch principal do projeto no SonarCloud é `development`, não `main` | O plano só serve dados da principal. Com `main` nesse papel, todo PR de feature (o caso comum) era recusado com `...PR targeting non main branches`. Inverter protege os PRs frequentes e deixa sem gate só o PR de release, que carrega código já gateado. |
 | 2026-08-22 | 5 | O ruleset de `main` **não** exige o check `sonar` | O job pula em PR para `main` de propósito, e check pulado conta como satisfeito. Exigi-lo seria exigir um skip. As duas listas de checks obrigatórios passaram a ser diferentes por isso. |
+| 2026-08-22 | 5 | O PR #4 precisou ser reaberto como #5 | O registro dele no SonarCloud ficou `isOrphan: true`, criado enquanto `development` ainda não era a principal. A chave do registro é o número do PR: nem rerun nem push novo reanexam a análise. Os PRs #1 e #3 se corrigiram sozinhos porque tinham análise válida anexada. |
+| 2026-08-22 | 5 | Os rulesets foram aplicados duas vezes | A primeira aplicação exigia `sonar` nas duas branches. Depois que o job passou a pular nos PRs para `main`, foi preciso reaplicar com listas diferentes — o script é idempotente e atualizou os mesmos ids (21214233, 21214234) em vez de duplicar. |
