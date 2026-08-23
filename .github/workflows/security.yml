@@ -1,0 +1,104 @@
+# Camada de segurança da pipeline. Separada da CI de propósito: o agendamento
+# semanal existe porque CVE nova aparece sem ninguém fazer commit, e um
+# workflow que só roda em push nunca a encontraria.
+name: Security
+
+on:
+  pull_request:
+    branches: [development, main]
+  push:
+    branches: [development, main]
+  schedule:
+    # Segunda-feira, 04:17 UTC. Minuto fora do zero para não cair no pico em
+    # que o GitHub enfileira todos os crons do mundo.
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # SAST. `build-mode: none` é o modo correto para JS/TS: o CodeQL analisa o
+  # fonte direto, sem precisar compilar o projeto.
+  codeql:
+    name: codeql
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          # O conjunto default é conservador. `security-extended` inclui
+          # consultas de precisão média — mais ruído, mas é onde moram as
+          # falhas de taint em cliente HTTP e em manipulação de cookie, que é
+          # exatamente o código que este repositório vai ganhar a seguir.
+          queries: security-extended
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript"
+
+  # Só faz sentido em PR: compara o manifesto das duas pontas e reprova quando
+  # o PR introduz dependência vulnerável ou licença incompatível.
+  dependency-review:
+    name: dependency-review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          # GPL numa dependência de frontend distribuído contamina o produto;
+          # o projeto é MIT.
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0
+          comment-summary-in-pr: on-failure
+
+  audit:
+    name: audit
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+
+      # Bloqueante: é o que sai na imagem Docker e roda em produção.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      # Informativo: uma CVE no Jest ou no Playwright é dívida a tratar, não
+      # motivo para travar o merge de uma tela. Aparece no resumo do job.
+      - name: Audit all dependencies (informational)
+        continue-on-error: true
+        run: npm audit --audit-level=moderate
+
+  secrets:
+    name: secrets
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Segredo vazado costuma estar num commit anterior, não no diff.
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

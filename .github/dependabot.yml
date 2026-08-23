@@ -1,0 +1,61 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: America/Sao_Paulo
+    # SEM ISTO o Dependabot abre PR contra a branch default (main), violando a
+    # política de release na primeira atualização que ele propuser.
+    target-branch: development
+    open-pull-requests-limit: 5
+    commit-message:
+      # Commitlint roda na CI e no hook: prefixo fora do padrão faz o próprio
+      # PR do Dependabot reprovar no job `commits`.
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    groups:
+      # Um PR por família em vez de um por pacote. React, Next e TanStack
+      # sobem em conjunto e revisá-los separados é revisar a mesma mudança
+      # três vezes.
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      next:
+        patterns: ["next", "eslint-config-next", "@next/*"]
+      tanstack:
+        patterns: ["@tanstack/*"]
+      tailwind:
+        patterns: ["tailwindcss", "@tailwindcss/*", "tw-animate-css"]
+      testing:
+        patterns: ["jest", "jest-*", "@types/jest", "@testing-library/*", "@playwright/*", "playwright"]
+      linting:
+        patterns: ["eslint", "typescript-eslint", "eslint-plugin-*", "@commitlint/*", "husky"]
+    ignore:
+      # TypeScript e ESLint estão fixados por decisão registrada em
+      # documents/specs/2026-08-22-frontend-scaffold-design.md: o TS 7 desliga
+      # as regras de lint com tipo (peer `<6.1.0` do typescript-eslint) e
+      # nenhum plugin suporta o ESLint 10. Subir major aqui quebra o gate em
+      # silêncio, então o major fica fora do automático de propósito.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: America/Sao_Paulo
+    target-branch: development
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        patterns: ["*"]

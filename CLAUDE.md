@@ -2,14 +2,122 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Leia também [`AGENTS.md`](./AGENTS.md): o Next.js 16 o mantém automaticamente (o bloco é reescrito a
+cada `next dev`) e ele avisa que esta versão tem *breaking changes* em relação ao conhecimento
+pré-treinado dos agentes, apontando a documentação real em `node_modules/next/dist/docs/`. Consulte
+essa pasta antes de escrever código de Next, em vez de confiar na memória.
+
+## Comandos
+
+| Comando | Faz |
+| --- | --- |
+| `npm run dev` | servidor de desenvolvimento |
+| `npm run build` | build de produção; emite `.next/standalone/` |
+| `npm run start:standalone` | sobe o artefato standalone (o mesmo que a imagem Docker roda) |
+| `npm run lint` | ESLint, com regras que usam informação de tipo |
+| `npm test` | Jest + RTL |
+| `npm test -- <caminho>` | **um único arquivo de teste** |
+| `npm run test:watch` | Jest em watch |
+| `npm run test:coverage` | cobertura |
+| `npm run e2e` | Playwright contra o build standalone |
+| `npm run e2e:ui` | Playwright em modo interativo |
+| `npm run typecheck` | `tsc --noEmit` isolado |
+| `docker build -t nexusops-frontend .` | mesma imagem que a CI publica no GHCR |
+| `bash scripts/setup-branch-rulesets.sh` | simula a política de branches no GitHub (`--apply` aplica) |
+
+
+### Coisas que mordem
+
+- **`next start` não funciona com `output: standalone`.** Use `npm run start:standalone`, que copia
+  `.next/static` para dentro de `.next/standalone/` antes de subir — o `next build` não faz essa
+  cópia. Sem ela o servidor responde 200 servindo a página **sem CSS**, e um teste que só verifique
+  texto passa verde.
+- **TypeScript está fixado em 6.0.3, não no `latest`.** O `typescript-eslint` declara peer
+  `<6.1.0`; subir para o TS 7 desliga silenciosamente todas as regras de lint com tipo.
+- **ESLint está em 9.39.5, não 10.** `eslint-plugin-react`, `eslint-plugin-import` e
+  `eslint-plugin-jsx-a11y` não suportam o ESLint 10 em nenhuma versão publicada.
+- **Os hooks de commit são reais**: `pre-commit` roda lint, `commit-msg` roda Commitlint
+  (Conventional Commits). Mensagem fora do padrão é rejeitada.
+- **Automatic Analysis do SonarCloud precisa estar DESLIGADA.** Com ela ligada, o job `sonar` morre
+  com `You are running CI analysis while Automatic Analysis is enabled`. É o erro mais provável de
+  aparecer na primeira execução da pipeline.
+- **O `sonarqube-scan-action` sai com 0 mesmo quando o Quality Gate reprova** — ele só envia o
+  relatório. Quem reprova é o passo `sonarqube-quality-gate-action` logo depois. Remover esse passo
+  deixa o gate verde para sempre.
+- **O SonarCloud desta organização só serve dados da branch principal do projeto — que lá é a
+  `development`, não a `main`.** Foi configurada assim de propósito: `development` é o alvo de todo
+  PR de feature, e é o recorte que precisa ser legível. Duas mensagens de recusa, ambas chegando
+  como o mesmo `curl: (22) The requested URL returned error: 403` no passo do Quality Gate, com o
+  scan tendo passado — só o corpo da resposta distingue:
+
+  - `Organization is not allowed to access data from non main branches`
+  - `Organization is not allowed to access data from PR targeting non main branches`
+
+  Por isso o job `sonar` roda **só em PR para `development` e no push de `development`**, e o
+  ruleset de `main` **não** exige `sonar` — exigir um check que sempre pula é pedir verde por
+  ausência. O PR de release `development → main` fica sem gate de propósito: ele carrega código que
+  já passou pelo gate ao entrar em `development`.
+
+  Três becos sem saída já percorridos, para ninguém repetir: **não é tipo de branch** (reclassificar
+  `development` de `SHORT` para `LONG` não muda nada); **não adianta forçar
+  `-Dsonar.pullrequest.base`** (o SonarCloud lê o alvo pela integração com o GitHub e ignora o
+  parâmetro — e informá-lo ainda desliga a auto-configuração, quebrando o scan com
+  `Parameter 'sonar.pullrequest.key' is mandatory`); e **não confie em PR antigo que passou** (os
+  #1 e #3 passaram porque `development` ainda não existia no SonarCloud e o scanner caía para `main`
+  sozinho).
+
+- **`fetch-depth: 0` nos jobs `sonar` e `secrets` não é otimização.** Sem o histórico completo o
+  Sonar não data as linhas e mede "New Code" errado, e o gitleaks não enxerga o commit onde o
+  segredo realmente entrou.
+- **`e2e` e `e2e:ui` são os nomes dos scripts**, não `test:e2e`.
+
 ## Estado do repositório
 
-O repositório ainda **não tem código**: apenas `LICENSE`, `README.md` e `documents/`. Não existe
-`package.json`, nem toolchain de build/lint/teste instalada.
+Scaffold pronto e verificado: Next 16 (App Router, `src/`, `output: standalone`), TypeScript 6
+estrito, Tailwind 4 + shadcn/ui (base Radix, preset nova), TanStack Query/Table/Virtual, Jest + RTL,
+Playwright, Husky + Commitlint.
 
-Consequência prática: **não há comandos de build, lint ou teste para rodar hoje**. Assim que o
-scaffold do Next.js existir, esta seção deve ser substituída pelos comandos reais (incluindo como
-rodar um único teste).
+Pipeline pronta e exercitada num PR real: GitHub Actions em três workflows (`CI`, `Security`,
+`Release`), SonarCloud com Quality Gate que reprova o job, CodeQL, Dependency Review, `npm audit`,
+gitleaks e Dependabot. Os rulesets das duas branches estão aplicados e recusam push direto.
+
+**O `Release` ainda não rodou.** Ele dispara no push de `main`, e nenhum merge `development → main`
+aconteceu até agora — a imagem foi construída e validada localmente (67 MB, uid 1001, `/api/health`
+respondendo, CSS servido com 200), mas nunca publicada no GHCR. O primeiro merge de release é o que
+prova essa metade.
+
+**Ainda não existe**: nenhuma tela de produto e nenhum cliente de API. O único Route Handler é
+`src/app/api/health/route.ts`, que serve ao `HEALTHCHECK` da imagem e não toca no backend — o
+primeiro Route Handler de produto é o proxy de login. `src/app/page.tsx` é página de verificação do
+scaffold, não UI de produto: a primeira tela real substitui o arquivo inteiro.
+
+O design que originou este scaffold está em
+[`documents/specs/2026-08-22-frontend-scaffold-design.md`](./documents/specs/2026-08-22-frontend-scaffold-design.md).
+
+## Fluxo de branches
+
+**`development` é a branch principal de trabalho.** Todo trabalho passa por ela.
+
+- Parta de `development` para qualquer feature ou correção — nunca de `main`.
+- **`main` só recebe código vindo de `development`**, nunca commits diretos e nunca merge de uma
+  branch de feature. `main` é a linha de release.
+- Isto é **exigido**, não combinado, desde 2026-08-22. A regra vive em dois lugares porque precisa
+  dos dois: o ruleset do GitHub sabe exigir PR e checks verdes, mas **não sabe dizer de qual branch
+  o PR pode vir** — essa metade é o job `branch-policy` da CI, que reprova PR
+  para `main` vindo de outra branch. Os rulesets aplicados por `scripts/setup-branch-rulesets.sh`
+  recusam push direto nas duas (`GH013: Repository rule violations found`).
+- **O PR de release `development → main` fecha com *merge commit*, nunca com squash.** As duas são
+  branches de vida longa, e squash entre elas quebra a ancestralidade: o commit esmagado não existe
+  em `development`, então o release seguinte tenta remergear os mesmos commits e conflita. Medido nos
+  34 commits do primeiro release — squash tira `main` da linha de ancestralidade e some com os 34 do
+  histórico; merge commit deixa `development` contido em `main`, intacto. O ruleset de `main` aceita
+  só `merge` por isso, e **não** exige histórico linear, que proibiria exatamente esse merge.
+- **Para conferir o ruleset, use `gh api repos/<owner>/<repo>/rules/branches/<branch>`.** O endpoint
+  legado `branches/<branch>/protection` só enxerga *branch protection* clássica e responde 404 mesmo
+  com ruleset ativo e recusando push — daria falso negativo numa configuração que funciona.
+- O `.claude/` é versionado neste repositório: skills e agents foram ajustados à stack decidida aqui,
+  então reinstalá-los via `npx claude-code-templates` sobrescreve as customizações. Veja o commit
+  `f3a3938` para o que foi removido e por quê.
 
 ## Documentos de referência
 
@@ -17,6 +125,7 @@ rodar um único teste).
 | ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
 | [`documents/MAIN.md`](./documents/MAIN.md)                                | entender o objetivo geral do produto e os diferenciais técnicos    |
 | [`documents/MAIN_FRONTEND.md`](./documents/MAIN_FRONTEND.md)              | qualquer decisão de stack ou estrutura de pastas                  |
+| [`documents/specs/2026-08-22-cicd-security-design.md`](./documents/specs/2026-08-22-cicd-security-design.md) | mexer em workflow, Dockerfile ou política de branches |
 | [`documents/backend/USERS.md`](./documents/backend/USERS.md)              | implementar login, refresh, senhas ou telas de usuários           |
 | [`documents/backend/TENANCY_EXTENSION.md`](./documents/backend/TENANCY_EXTENSION.md) | entender por que a API responde 404 e não 403          |
 | [`documents/backend/RLS_NOTES.md`](./documents/backend/RLS_NOTES.md)      | contexto de isolamento no banco (não afeta o frontend diretamente)|
@@ -97,6 +206,12 @@ Pontos que mudam o desenho das telas — o *porquê* de cada um está em `docume
 
 ## Próximo passo
 
-Scaffold do Next.js + TypeScript, com Tailwind/Shadcn, TanStack Query, Husky e Commitlint. Ao fazê-lo,
-atualizar a seção "Estado do repositório" desta página com os comandos reais de dev, build, lint,
-teste unitário (e teste único) e E2E.
+A fatia de login ponta a ponta, que é o que prova a arquitetura de BFF decidida na spec: formulário
+com `tenantDomain`, Route Handler fazendo proxy para o NestJS, access token em cookie `httpOnly`,
+`middleware.ts` protegendo rotas e refresh serializado no servidor.
+
+É também onde entram os cabeçalhos de segurança HTTP (CSP, HSTS): CSP com Next exige nonce por
+requisição e pertence ao mesmo middleware, não ao `next.config.ts` isolado.
+
+O Next 16 traz guias locais diretamente aplicáveis a isso — veja
+`node_modules/next/dist/docs/01-app/02-guides/backend-for-frontend.md` e `.../multi-tenant.md`.
