@@ -7,7 +7,7 @@
     "dev": "next dev",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-    "lint": "eslint",
+    "lint": "next typegen && eslint",
     "start": "next start",
     "start:standalone": "bash scripts/start-standalone.sh",
     "test": "jest",
@@ -53,6 +53,6 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.67.0"
   },
-  "description": "Frontend do NexusOps — SaaS B2B multi-tenant de helpdesk interno",
+  "description": "Frontend do NexusOps \u2014 SaaS B2B multi-tenant de helpdesk interno",
   "license": "MIT"
 }

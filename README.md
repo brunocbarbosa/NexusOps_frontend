@@ -57,14 +57,15 @@ An in-progress portfolio project, and this table says exactly where it stands.
 | ----------------------------------------------- | -------------- | -------------------------------------------------------------------- |
 | Architecture & contract documentation           | ✅ Implemented | `documents/`, plus the backend's measured behaviour mirrored in-repo |
 | Working agreements for AI agents (`CLAUDE.md`)  | ✅ Implemented | Stack, feature layout, and the API contract that shapes the screens  |
-| Next.js scaffold — TypeScript, App Router       | 🚧 Planned     | Nothing in `src/` yet; the repository is documentation only          |
-| Design System — Tailwind + shadcn/ui            | 🚧 Planned     | Tokens, primitives, and the app shell                                |
-| Auth — login with `tenantDomain`, refresh flow  | 🚧 Planned     | Single-flight refresh is a hard requirement, see below               |
+| Next.js scaffold — TypeScript, App Router       | ✅ Implemented | Next 16, `src/`, `standalone` output, Jest + RTL, Playwright         |
+| Design System — Tailwind + shadcn/ui            | ✅ Implemented | Tokens, primitives, app shell, light and dark                        |
+| Auth — login with `tenantDomain`, refresh flow  | ✅ Implemented | BFF: `httpOnly` cookies, single-flight refresh, `proxy.ts` route gate |
+| Identity — users list and administration        | ✅ Implemented | Search, role filter, create, edit, deactivate, restore, own password |
 | Helpdesk — ticket grid and detail               | 🚧 Planned     | TanStack Table + the `409 Conflict` reconciliation flow              |
 | Audit timeline — virtualized                    | 🚧 Planned     | `@tanstack/react-virtual`, tens of thousands of rows                 |
 | Async reports — `202` + SSE/WebSocket           | 🚧 Planned     | Depends on the backend's queue module, itself planned                |
-| Test tiers — Jest + RTL, Playwright             | 🚧 Planned     | Commands below are the intended scripts, not yet runnable            |
-| CI/CD — Husky, Commitlint, SonarCloud           | 🚧 Planned     | Mirrors the backend pipeline                                         |
+| Test tiers — Jest + RTL, Playwright             | ✅ Implemented | 22 unit suites, 110 tests; 10 Playwright specs against a stubbed API |
+| CI/CD — Husky, Commitlint, SonarCloud           | ✅ Implemented | Mirrors the backend pipeline                                         |
 
 ---
 
@@ -201,10 +202,18 @@ PR into `main` goes ungated on purpose, carrying code the gate already cleared o
 
 ## Getting started
 
-> The scaffold and the pipeline are in place; the product screens are not. `src/app/page.tsx` is a
-> scaffold verification page, and the first real screen replaces it entirely.
+> The identity slice — login, session, users — is in place. Helpdesk, assets and auditing are not.
 
 **Requirements:** Node.js 24 (same major as the backend), npm, and a running [NexusOps API](https://github.com/brunocbarbosa/NexusOps_backend).
+
+Both servers default to port 3000, so run the API there and Next on 3001. There is no sign-up
+screen: the first tenant and its first admin come from `POST /auth/register`, which the backend
+exposes and this repository deliberately does not wrap yet.
+
+```bash
+curl -X POST http://localhost:3000/auth/register -H 'content-type: application/json' \
+  -d '{"tenantName":"Acme Inc","tenantDomain":"acme.com","email":"admin@acme.com","password":"correct horse battery"}'
+```
 
 ```bash
 git clone https://github.com/brunocbarbosa/NexusOps_frontend.git
@@ -212,12 +221,12 @@ cd NexusOps_frontend
 npm install
 
 cp .env.example .env.local   # points at the API — defaults assume http://localhost:3000
-npm run dev                  # http://localhost:3001
+PORT=3001 npm run dev        # http://localhost:3001
 ```
 
 ```bash
 npm run test                 # unit tier — Jest + RTL
-npm run e2e                  # Playwright, headless, against the standalone artifact
+npm run e2e                  # Playwright against the standalone artifact and a stubbed API
 npm run lint                 # ESLint, with type-aware rules
 npm run typecheck            # tsc --noEmit
 npm run build                # Next.js production build (standalone output)
@@ -230,7 +239,7 @@ small — the image copies the standalone bundle instead of `node_modules`.
 
 ## Project layout
 
-The structure. `features/` holds one folder per domain; only `identity` lands with the login slice.
+The structure. `features/` holds one folder per domain; `identity` is the one that exists today.
 
 ```
 src/
@@ -244,8 +253,9 @@ src/
   components/ui/            # Design System — Tailwind + shadcn/ui primitives
   lib/
     api/                    # the HTTP chokepoint: auth header, single-flight refresh, error mapping
-    query/                  # QueryClient, shared query keys and defaults
+  proxy.ts                  # route gate and security headers (Next 16 renamed `middleware.ts`)
 e2e/                        # Playwright specs
+  support/fake-api.mjs      # stub of the NestJS API, so the E2E tier needs no backend
 .github/workflows/          # CI, Security, Release
 scripts/                    # start-standalone.sh, setup-branch-rulesets.sh
 Dockerfile                  # multi-stage image over the standalone output
@@ -263,10 +273,12 @@ Project documentation is written in Portuguese; the code and its comments are in
 | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
 | [`documents/MAIN.md`](./documents/MAIN.md)                                           | Product scope and the senior-level problems the system is built around  |
 | [`documents/MAIN_FRONTEND.md`](./documents/MAIN_FRONTEND.md)                         | The frontend stack and the reasoning behind organizing by feature       |
+| [`documents/TESTE_MANUAL.md`](./documents/TESTE_MANUAL.md)                           | Manual test script: dev tenant accounts, what to click, what to look at |
 | [`documents/backend/USERS.md`](./documents/backend/USERS.md)                         | Measured auth behaviour — login, refresh rotation, passwords, soft delete |
 | [`documents/backend/TENANCY_EXTENSION.md`](./documents/backend/TENANCY_EXTENSION.md) | How tenant isolation is enforced, and why the API answers 404 not 403   |
 | [`documents/backend/RLS_NOTES.md`](./documents/backend/RLS_NOTES.md)                 | Row-Level Security research from the backend, kept here for context     |
 | [`documents/specs/2026-08-22-cicd-security-design.md`](./documents/specs/2026-08-22-cicd-security-design.md) | The pipeline: why four workflows, where the branch policy is enforced |
+| [`documents/specs/2026-08-23-identity-login-users-design.md`](./documents/specs/2026-08-23-identity-login-users-design.md) | The identity slice: the BFF, the serialized refresh, and what was left out |
 | [`SECURITY.md`](./SECURITY.md)                                                       | How to report a vulnerability, and what the pipeline already checks     |
 | [`CLAUDE.md`](./CLAUDE.md)                                                           | Working agreements and traps, for both humans and AI agents             |
 
@@ -276,14 +288,15 @@ Project documentation is written in Portuguese; the code and its comments are in
 
 - [x] Next.js scaffold — TypeScript strict, App Router, `standalone` output
 - [x] Tooling — ESLint, Husky, Commitlint
-- [ ] Design System — Tailwind tokens, shadcn/ui primitives, the app shell
-- [ ] API client — auth header, single-flight refresh, status-code error mapping
-- [ ] Identity — login with `tenantDomain`, session handling, RBAC-aware navigation
+- [x] Design System — Tailwind tokens, shadcn/ui primitives, the app shell
+- [x] API client — auth header, single-flight refresh, status-code error mapping
+- [x] Identity — login with `tenantDomain`, session handling, RBAC-aware navigation
+- [ ] Content Security Policy — per-request nonce in `proxy.ts`, left out of the identity slice
 - [ ] Helpdesk — ticket grid with TanStack Table and the `409` reconciliation flow
 - [ ] Auditing — virtualized timeline with `@tanstack/react-virtual`
 - [ ] Assets — inventory of notebooks and licenses
 - [ ] Async reports — `202 Accepted` plus SSE/WebSocket completion notice
-- [ ] Tests — Jest + RTL unit tier, Playwright critical flows
+- [x] Tests — Jest + RTL unit tier, Playwright critical flows
 - [x] CI/CD — quality gate, SonarCloud, security scanning, branch rulesets
 - [ ] Release — the GHCR publish workflow exists and the image is verified locally, but no
       `development → main` merge has run it yet

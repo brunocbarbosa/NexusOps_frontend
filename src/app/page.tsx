@@ -1,19 +1,16 @@
-import { Button } from "@/components/ui/button";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+
+import { REFRESH_TOKEN_COOKIE } from "@/lib/api/cookie-names";
 
 /**
- * Página de verificação do scaffold.
+ * A raiz não tem conteúdo próprio: manda para a aplicação ou para o login.
  *
- * Existe para provar que a cadeia Tailwind -> shadcn -> componente renderiza.
- * A primeira tela real de produto substitui este arquivo inteiro.
+ * O `proxy.ts` já faria o mesmo para quem chega sem sessão; esta página é o que
+ * decide para onde vai quem **tem** sessão.
  */
-export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
-      <h1 className="text-3xl font-semibold tracking-tight">NexusOps</h1>
-      <p className="text-muted-foreground text-sm">
-        Scaffold operante — Tailwind e shadcn/ui renderizando.
-      </p>
-      <Button>Componente shadcn</Button>
-    </main>
-  );
+export default async function RootPage() {
+  const signedIn = (await cookies()).has(REFRESH_TOKEN_COOKIE);
+
+  redirect(signedIn ? "/users" : "/login");
 }
