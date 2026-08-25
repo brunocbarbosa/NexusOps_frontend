@@ -37,11 +37,14 @@ partir de `ADMIN_MASTER_EMAIL` e `ADMIN_MASTER_PASSWORD` do `.env` do backend, e
 a cada reinício. É por isso que ele não tem tela de *Account* — uma senha trocada pela API seria
 revertida no próximo boot.
 
-| Campo          | Valor                                              |
-| -------------- | -------------------------------------------------- |
-| Company domain | `platform` — literal, é o domínio reservado        |
-| Email          | o de `ADMIN_MASTER_EMAIL` no `.env` do backend     |
-| Senha          | a de `ADMIN_MASTER_PASSWORD`                       |
+No login, marque **Sign in as platform operator**, embaixo do campo *Company domain*. O campo trava
+mostrando `platform` — o domínio reservado — e você preenche só e-mail e senha:
+
+| Campo          | Valor                                                        |
+| -------------- | ------------------------------------------------------------ |
+| Company domain | travado em `platform` pela caixinha; não se digita nada ali  |
+| Email          | o de `ADMIN_MASTER_EMAIL` no `.env` do backend               |
+| Senha          | a de `ADMIN_MASTER_PASSWORD`                                 |
 
 Existe **exatamente um**, sempre: um índice único parcial no PostgreSQL recusa o segundo.
 
@@ -69,8 +72,9 @@ Todas no tenant **`acme.com`** — é o que vai no campo *Company domain* do log
   a tela não tenta ser mais esperta que ele.
 - Deixe os campos vazios: a validação é local, e nada é enviado.
 - Entre com `admin@acme.com`. Você cai em `/users`.
-- Saia e entre como o operador, com o domínio `platform`. Você cai em **`/platform/companies`** —
-  mesmo formulário, destino diferente. O menu mostra *Companies* e **não** mostra *Users* nem
+- Saia e marque **Sign in as platform operator**: o campo de domínio trava em `platform`. Entre com
+  as credenciais do `.env` e você cai em **`/platform/companies`** — mesmo formulário, destino
+  diferente. Desmarcar devolve o campo e o que estava digitado nele. O menu mostra *Companies* e **não** mostra *Users* nem
   *Account*: os papéis não são hierárquicos, e ele toma 403 em `/users`.
 
 ### Papéis
@@ -82,7 +86,7 @@ Todas no tenant **`acme.com`** — é o que vai no campo *Company domain* do log
 
 ### O console do operador
 
-Entre com o domínio `platform`.
+Entre marcando **Sign in as platform operator**.
 
 - **Bloquear.** Desmarque a caixinha *Active* da `Acme Inc`. Ela não muta no clique: confirma
   primeiro, e o texto diz que ninguém daquela empresa vai conseguir entrar e que dá para desfazer.

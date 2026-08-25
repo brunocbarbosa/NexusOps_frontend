@@ -11,13 +11,14 @@ import { fakeApiURL } from "../playwright.config";
 test.describe.configure({ mode: "serial" });
 
 const OPERATOR = {
-  // O domínio reservado. É a única coisa que difere de qualquer outro login.
-  domain: "platform",
+  // Sem `domain`: quem preenche o domínio reservado é a caixinha do formulário.
+  operator: true,
   email: "admin@nexusops.local",
   password: "correct horse battery",
 };
 
 const COMPANY_ADMIN = {
+  operator: false,
   domain: "acme.com",
   email: "admin@acme.com",
   password: "correct horse battery",
@@ -34,11 +35,20 @@ test.beforeEach(async ({ request }) => {
  */
 async function signIn(
   page: Page,
-  who: { domain: string; email: string; password: string },
+  who: { operator: boolean; domain?: string; email: string; password: string },
   landing: RegExp | null = null,
 ) {
   await page.goto("/login");
-  await page.getByLabel("Company domain").fill(who.domain);
+
+  if (who.operator) {
+    // O caminho de verdade: marcar trava o campo e manda o domínio reservado.
+    await page.getByLabel("Sign in as platform operator").check();
+    await expect(page.getByLabel("Company domain")).toBeDisabled();
+    await expect(page.getByLabel("Company domain")).toHaveValue("platform");
+  } else {
+    await page.getByLabel("Company domain").fill(who.domain ?? "");
+  }
+
   await page.getByLabel("Email").fill(who.email);
   await page.getByLabel("Password", { exact: true }).fill(who.password);
   await page.getByRole("button", { name: "Sign in" }).click();

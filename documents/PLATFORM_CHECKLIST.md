@@ -162,6 +162,24 @@ que "não redirecionou". `playwright.config.ts` passa a fixar `workers: 1` e `fu
 
 ---
 
+## Camada 10 — A caixinha do login (pedido esclarecido)
+
+O pedido original era uma caixinha **na tela de login**, ao lado de *Company domain*: marcar trava o
+campo e entra-se com as credenciais do `ADMIN_MASTER`. Foi lida como "bloquear a company" e virou a
+coluna *Active* da tabela — que continua valendo, mas não era isto.
+
+- [x] Caixinha *Sign in as platform operator* em `login-form.tsx`
+- [x] Marcar trava o campo e envia `tenantDomain: "platform"`; desmarcar devolve o que estava digitado
+- [x] Validação de domínio some com a caixinha marcada — o campo está desabilitado
+- [x] Campo desabilitado **não entra no `FormData`**: o domínio reservado é informado no `submit`
+- [x] Dublê de `ResizeObserver` em `src/test/setup.ts` (o `Checkbox` do Radix o exige no jsdom)
+- [x] `e2e/platform.spec.ts` passa a entrar pela caixinha, que é o caminho de verdade
+- [x] **Verificar:** `npm test` verde (185 testes, 31 suítes)
+- [x] **Verificar:** `npm run build && npm run e2e` verde — 20 testes
+- [x] Commit
+
+---
+
 ## Pendências e avisos
 
 - [!] **Avisar o Bruno:** `FRONTEND_PLATFORM_SPEC.md` §3 diz que `role` só vale `ADMIN_MASTER` em

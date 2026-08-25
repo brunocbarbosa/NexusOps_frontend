@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { EyeIcon, EyeOffIcon, LoaderCircleIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/errors";
@@ -16,25 +17,48 @@ import { validateEmail, validateRequired, validateTenantDomain } from "../valida
 type FieldName = "tenantDomain" | "email" | "password";
 type FieldErrors = Partial<Record<FieldName, string>>;
 
+/**
+ * O domínio reservado do operador da plataforma. Não é uma empresa, e nenhuma
+ * pode reivindicá-lo — `POST /platform/companies` recusa com 400.
+ */
+const PLATFORM_DOMAIN = "platform";
+
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
   const login = useLogin();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [showPassword, setShowPassword] = useState(false);
 
+  /**
+   * Marcar entra como operador da plataforma.
+   *
+   * O backend não tem rota de login separada: é o mesmo `POST /auth/login` com
+   * `tenantDomain: "platform"`. A caixinha existe para ninguém precisar decorar
+   * essa palavra, e para deixar claro que ali não vai o domínio de empresa
+   * nenhuma — por isso ela **trava** o campo em vez de só preenchê-lo.
+   */
+  const [asOperator, setAsOperator] = useState(false);
+  const [domain, setDomain] = useState("");
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const form = new FormData(event.currentTarget);
     const credentials = {
-      tenantDomain: readField(form, "tenantDomain").trim(),
+      // Campo desabilitado não entra no `FormData`, então o domínio reservado é
+      // informado aqui em vez de lido do formulário.
+      tenantDomain: asOperator ? PLATFORM_DOMAIN : domain.trim(),
       email: readField(form, "email").trim(),
       password: readField(form, "password"),
     };
 
     const found: FieldErrors = {};
-    const domain = validateTenantDomain(credentials.tenantDomain);
-    if (domain) found.tenantDomain = domain;
+    // Como operador não há o que validar: o valor é constante e não veio de
+    // quem está digitando.
+    const domainError = asOperator
+      ? null
+      : validateTenantDomain(credentials.tenantDomain);
+    if (domainError) found.tenantDomain = domainError;
     const email = validateEmail(credentials.email);
     if (email) found.email = email;
     // Só presença: aplicar a política de senha aqui responderia "esta conta usa
@@ -74,14 +98,38 @@ export function LoginForm({ next }: { next: string }) {
         </p>
       ) : null}
 
-      <Field
-        name="tenantDomain"
-        label="Company domain"
-        placeholder="acme.com"
-        autoComplete="organization"
-        error={errors.tenantDomain}
-        hint="The domain your company signed up with."
-      />
+      <div className="grid gap-2">
+        <Field
+          name="tenantDomain"
+          label="Company domain"
+          placeholder="acme.com"
+          autoComplete="organization"
+          error={errors.tenantDomain}
+          hint={
+            asOperator
+              ? "Locked: the platform operator does not belong to a company."
+              : "The domain your company signed up with."
+          }
+          value={asOperator ? PLATFORM_DOMAIN : domain}
+          onChange={(event) => setDomain(event.target.value)}
+          disabled={asOperator}
+        />
+
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="as-operator"
+            checked={asOperator}
+            onCheckedChange={(checked) => {
+              setAsOperator(checked === true);
+              // O erro do campo travado não faria sentido continuar na tela.
+              setErrors((current) => ({ ...current, tenantDomain: undefined }));
+            }}
+          />
+          <Label htmlFor="as-operator" className="text-muted-foreground text-sm">
+            Sign in as platform operator
+          </Label>
+        </div>
+      </div>
 
       <Field
         name="email"
@@ -153,6 +201,9 @@ interface FieldProps {
   type?: string;
   placeholder?: string;
   autoComplete?: string;
+  value?: string;
+  onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
 }
 
 function Field({ name, label, error, hint, ...input }: FieldProps) {

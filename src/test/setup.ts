@@ -31,3 +31,14 @@ if (typeof Element !== "undefined") {
     scrollIntoView: noop,
   });
 }
+
+/**
+ * Nem `ResizeObserver`, que o Radix usa para posicionar. Um dublê inerte basta:
+ * nada nos testes depende de reagir a mudança de tamanho, e a alternativa é
+ * `ReferenceError: ResizeObserver is not defined` na montagem do componente.
+ */
+globalThis.ResizeObserver ??= class {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+};

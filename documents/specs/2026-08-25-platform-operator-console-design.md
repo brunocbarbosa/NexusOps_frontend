@@ -36,7 +36,18 @@ usuário. Construir uma hierarquia no cliente e supor que a API concorda produzi
 
 ### 3.1 Um login só, um despachante só
 
-O operador entra pela mesma rota, com o domínio reservado `platform`. O formulário não muda.
+O operador entra pela mesma rota, com o domínio reservado `platform`. O backend não tem rota de
+login separada, e o formulário é o mesmo.
+
+O que ele ganha é uma **caixinha** ao lado de *Company domain*: marcar **trava** o campo e envia o
+domínio reservado. Ela existe para ninguém ter de decorar a palavra `platform`, e trava em vez de só
+preencher porque ali não vai o domínio de empresa nenhuma — o operador não pertence a uma. Marcada,
+a validação de domínio some junto: cobrar preenchimento de um campo desabilitado seria cobrar o
+impossível.
+
+Um detalhe que morde: **campo desabilitado não entra no `FormData`**. O domínio reservado é
+informado no `submit`, não lido do formulário — sem isso o corpo sairia sem `tenantDomain` e o
+backend responderia 400.
 
 O que muda é o destino. E ele não pode ser decidido onde seria natural: o `proxy.ts` só enxerga a
 **presença** do cookie de refresh, e nenhum Server Component busca dado autenticado — um RSC que
