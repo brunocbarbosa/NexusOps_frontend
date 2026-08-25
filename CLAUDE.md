@@ -129,8 +129,7 @@ listagem e administração de usuários, e troca da própria senha. O desenho es
 **A fatia `platform` está implementada**: o console do operador (`ADMIN_MASTER`) em
 `/platform/**` — listar, criar, editar, bloquear e apagar companies, e gerenciar os usuários de
 cada uma. Desenho em
-[`documents/specs/2026-08-25-platform-operator-console-design.md`](./documents/specs/2026-08-25-platform-operator-console-design.md),
-execução rastreada em [`documents/PLATFORM_CHECKLIST.md`](./documents/PLATFORM_CHECKLIST.md).
+[`documents/specs/2026-08-25-platform-operator-console-design.md`](./documents/specs/2026-08-25-platform-operator-console-design.md).
 
 Três regras que caíram daí:
 
@@ -199,7 +198,6 @@ O design que originou este scaffold está em
 | [`documents/MAIN.md`](./documents/MAIN.md)                                | entender o objetivo geral do produto e os diferenciais técnicos    |
 | [`documents/MAIN_FRONTEND.md`](./documents/MAIN_FRONTEND.md)              | qualquer decisão de stack ou estrutura de pastas                  |
 | [`documents/TESTE_MANUAL.md`](./documents/TESTE_MANUAL.md)                | testar as telas na mão: contas do tenant de dev e o que observar  |
-| [`documents/FRONTEND_PLATFORM_SPEC.md`](./documents/FRONTEND_PLATFORM_SPEC.md) | o contrato dos dois consoles, com payloads capturados        |
 | [`documents/backend/PLATFORM.md`](./documents/backend/PLATFORM.md)        | mexer no console do operador, em companies ou no papel `ADMIN_MASTER` |
 | [`documents/specs/2026-08-22-cicd-security-design.md`](./documents/specs/2026-08-22-cicd-security-design.md) | mexer em workflow, Dockerfile ou política de branches |
 | [`documents/backend/USERS.md`](./documents/backend/USERS.md)              | implementar login, refresh, senhas ou telas de usuários           |

@@ -1,8 +1,7 @@
 # Fatia `platform`: o console do operador
 
 **Data:** 2026-08-25 · **Estado:** em implementação · **Precede:**
-[`2026-08-23-identity-login-users-design.md`](./2026-08-23-identity-login-users-design.md) ·
-**Checklist:** [`../PLATFORM_CHECKLIST.md`](../PLATFORM_CHECKLIST.md)
+[`2026-08-23-identity-login-users-design.md`](./2026-08-23-identity-login-users-design.md)
 
 A interface é escrita em **inglês**; a documentação continua em português.
 
