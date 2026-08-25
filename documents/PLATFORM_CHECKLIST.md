@@ -76,20 +76,28 @@ célula, que lê o escopo. Apareceu como um teste achando um `<span>` já descon
 
 ## Camada 5 — Tela de companies
 
-- [ ] `npx shadcn@latest add checkbox` (não estava instalado)
-- [ ] `src/features/platform/types.ts` — `Company`, `CompaniesPage`, `CompaniesQuery`, `CreateCompanyInput`, `CreateCompanyResult`
-- [ ] `src/features/platform/queries/` — `platformKeys` e os hooks de company
-- [ ] Listagem: busca com debounce 300 ms, filtro Active/Blocked/All, paginação de servidor
-- [ ] Coluna Domain rende `—` quando `null` (o backend permite)
-- [ ] **Checkbox "Active"**: não muta sozinho — abre `AlertDialog` que nomeia a company, e o diálogo
+- [x] `npx shadcn@latest add checkbox` (não estava instalado)
+- [x] `src/features/platform/types.ts` — `Company`, `CompaniesPage`, `CompaniesQuery`, `CreateCompanyInput`, `CreateCompanyResult`
+- [x] `src/features/platform/queries/` — `platformKeys` e os hooks de company
+- [x] Listagem: busca com debounce 300 ms, filtro Active/Blocked/All, paginação de servidor
+- [x] Coluna Domain rende `—` quando `null` (o backend permite)
+- [x] **Checkbox "Active"**: não muta sozinho — abre `AlertDialog` que nomeia a company, e o diálogo
       **não fecha no erro** (`event.preventDefault()`)
-- [ ] Criar company: um diálogo, duas seções (Company + Administrator) — a API recusa criar sem ADMIN
-- [ ] Senha do ADMIN validada em **bytes** (reusar `validatePassword`/`passwordByteLength`)
-- [ ] No 201, painel de credenciais que **só fecha por botão explícito** — não há convite nem reset
-- [ ] Editar nome/domínio; 409 de domínio duplicado vira erro no campo
-- [ ] `DELETE` num diálogo separado, exigindo digitar o nome da company, oferecendo bloquear como alternativa
-- [ ] **Verificar:** `npm test` verde
-- [ ] Commit
+- [x] Criar company: um diálogo, duas seções (Company + Administrator) — a API recusa criar sem ADMIN
+- [x] Senha do ADMIN validada em **bytes** (reusar `validatePassword`/`passwordByteLength`)
+- [x] No 201, painel de credenciais que **só fecha por botão explícito** — não há convite nem reset
+- [x] Editar nome/domínio; 409 de domínio duplicado vira erro no campo
+- [x] `DELETE` num diálogo separado, exigindo digitar o nome da company, oferecendo bloquear como alternativa
+- [x] **Verificar:** `npm test` verde (164 testes, 30 suítes)
+- [x] Commit
+
+### Achado: o Radix não abre no jsdom
+
+`userEvent.click` num `Select` ou `DropdownMenu` morria com
+`target.hasPointerCapture is not a function` — o jsdom não implementa a Pointer Events API nem
+`scrollIntoView`. Dublês em `src/test/setup.ts`, ao lado do `TextEncoder`, e **guardados por
+`typeof Element !== "undefined"`**: os testes de Route Handler rodam em `@jest-environment node`,
+onde `Element` não existe, e sem a guarda as 17 suítes de handler quebram na importação.
 
 ## Camada 6 — Usuários de uma company
 
