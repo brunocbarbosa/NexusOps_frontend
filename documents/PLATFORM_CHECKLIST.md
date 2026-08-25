@@ -110,16 +110,16 @@ onde `Element` não existe, e sem a guarda as 17 suítes de handler quebram na i
 
 ## Camada 7 — Navegação e roteamento por papel
 
-- [ ] `NAV` ganha "Companies" para `ADMIN_MASTER`
-- [ ] "Account" escondido do operador — o `.env` do backend é a fonte da verdade da senha dele
-- [ ] `aria-current` por prefixo (`pathname === href || pathname.startsWith(href + "/")`)
-- [ ] `landingPath(role, next)` em `next-path.ts`, pura e testada
-- [ ] `proxy.ts`: quem tem sessão em `/login` vai para `/`, não para `/users`
-- [ ] `src/app/page.tsx`: RSC para "sem cookie → `/login`"; com cookie, `<SessionLanding />` despacha por papel
-- [ ] `FALLBACK` de `safeNextPath` vira `/`
-- [ ] **Verificar:** `npm test` verde
-- [ ] **Verificar:** `npm run e2e` verde (identity e smoke não podem regredir)
-- [ ] Commit
+- [x] `NAV` ganha "Companies" para `ADMIN_MASTER`
+- [x] "Account" escondido do operador — o `.env` do backend é a fonte da verdade da senha dele
+- [x] `aria-current` por prefixo (`pathname === href || pathname.startsWith(href + "/")`)
+- [x] `landingPath(role, next)` em `next-path.ts`, pura e testada
+- [x] `proxy.ts`: quem tem sessão em `/login` vai para `/`, não para `/users`
+- [x] `src/app/page.tsx`: RSC para "sem cookie → `/login`"; com cookie, `<SessionLanding />` despacha por papel
+- [x] `FALLBACK` de `safeNextPath` vira `/`
+- [x] **Verificar:** `npm test` verde (181 testes, 31 suítes)
+- [x] **Verificar:** `npm run e2e` verde — 11 testes de identity e smoke intactos
+- [x] Commit
 
 ## Camada 8 — E2E
 

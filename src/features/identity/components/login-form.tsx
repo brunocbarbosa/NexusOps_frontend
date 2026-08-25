@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/errors";
 
+import { landingPath } from "../next-path";
 import { useLogin } from "../queries/session";
 import { validateEmail, validateRequired, validateTenantDomain } from "../validation";
 
@@ -47,8 +48,11 @@ export function LoginForm({ next }: { next: string }) {
     }
 
     login.mutate(credentials, {
-      onSuccess: () => {
-        router.replace(next);
+      onSuccess: ({ user }) => {
+        // O papel vem no corpo do login, e é a única forma de saber o console
+        // certo aqui: o porteiro de rotas só enxerga a presença do cookie, e a
+        // UI nunca decodifica o JWT.
+        router.replace(landingPath(user.role, next));
       },
     });
   }

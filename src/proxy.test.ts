@@ -41,10 +41,12 @@ describe("proxy", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
-  it("tira de /login quem já tem sessão", () => {
+  it("tira de /login quem já tem sessão, mandando para a raiz", () => {
+    // A raiz e não `/users`: existem dois consoles, e daqui só se enxerga a
+    // presença do cookie. Quem despacha por papel é `/`.
     const response = proxy(request("/login", { signedIn: true }));
 
-    expect(new URL(response.headers.get("location") ?? "").pathname).toBe("/users");
+    expect(new URL(response.headers.get("location") ?? "").pathname).toBe("/");
   });
 
   it("deixa o login aberto para quem não tem sessão", () => {
