@@ -11,7 +11,7 @@ import {
 import { fetchJson, fetchVoid, jsonBody } from "@/lib/api/client";
 
 import type { AssignableRole, User, UsersPage, UsersQuery } from "../types";
-import { identityKeys } from "./keys";
+import { useUsersScope } from "../users-scope";
 
 export function usersSearchParams(query: UsersQuery): string {
   const params = new URLSearchParams({
@@ -35,9 +35,12 @@ export function usersSearchParams(query: UsersQuery): string {
 }
 
 export function useUsers(query: UsersQuery) {
+  const scope = useUsersScope();
+
   return useQuery({
-    queryKey: identityKeys.usersList(query),
-    queryFn: () => fetchJson<UsersPage>(`/api/users?${usersSearchParams(query)}`),
+    queryKey: [...scope.queryKeyRoot, "list", query],
+    queryFn: () =>
+      fetchJson<UsersPage>(`${scope.basePath}?${usersSearchParams(query)}`),
     // Mantém a página anterior visível enquanto a próxima carrega, em vez de
     // piscar a tabela inteira a cada clique na paginação.
     placeholderData: keepPreviousData,
@@ -51,8 +54,10 @@ export interface CreateUserInput {
 }
 
 export function useCreateUser(): UseMutationResult<User, Error, CreateUserInput> {
+  const { basePath } = useUsersScope();
+
   return useInvalidatingMutation((input: CreateUserInput) =>
-    fetchJson<User>("/api/users", { method: "POST", ...jsonBody(input) }),
+    fetchJson<User>(basePath, { method: "POST", ...jsonBody(input) }),
   );
 }
 
@@ -63,8 +68,10 @@ export interface UpdateUserInput {
 }
 
 export function useUpdateUser(): UseMutationResult<User, Error, UpdateUserInput> {
+  const { basePath } = useUsersScope();
+
   return useInvalidatingMutation(({ id, ...changes }: UpdateUserInput) =>
-    fetchJson<User>(`/api/users/${id}`, { method: "PATCH", ...jsonBody(changes) }),
+    fetchJson<User>(`${basePath}/${id}`, { method: "PATCH", ...jsonBody(changes) }),
   );
 }
 
@@ -73,14 +80,18 @@ export function useUpdateUser(): UseMutationResult<User, Error, UpdateUserInput>
  * continua ocupado, e todas as sessões daquele usuário são encerradas.
  */
 export function useDeactivateUser(): UseMutationResult<void, Error, string> {
+  const { basePath } = useUsersScope();
+
   return useInvalidatingMutation((id: string) =>
-    fetchVoid(`/api/users/${id}`, { method: "DELETE" }),
+    fetchVoid(`${basePath}/${id}`, { method: "DELETE" }),
   );
 }
 
 export function useRestoreUser(): UseMutationResult<User, Error, string> {
+  const { basePath } = useUsersScope();
+
   return useInvalidatingMutation((id: string) =>
-    fetchJson<User>(`/api/users/${id}/restore`, { method: "POST" }),
+    fetchJson<User>(`${basePath}/${id}/restore`, { method: "POST" }),
   );
 }
 
@@ -88,13 +99,15 @@ function useInvalidatingMutation<TData, TInput>(
   mutationFn: (input: TInput) => Promise<TData>,
 ): UseMutationResult<TData, Error, TInput> {
   const queryClient = useQueryClient();
+  const { queryKeyRoot } = useUsersScope();
 
   return useMutation({
     mutationFn,
     onSuccess: async () => {
       // Toda mutação muda a listagem: papel, status ou o total. Invalidar a
-      // raiz da chave alcança todas as combinações de filtro em cache.
-      await queryClient.invalidateQueries({ queryKey: identityKeys.users });
+      // raiz da chave alcança todas as combinações de filtro em cache — e só
+      // as da company que está aberta, porque a raiz vem do escopo.
+      await queryClient.invalidateQueries({ queryKey: queryKeyRoot });
     },
   });
 }

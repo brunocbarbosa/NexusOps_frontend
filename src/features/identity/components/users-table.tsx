@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 import { formatDate } from "../format";
 import type { User } from "../types";
+import { useUsersScope } from "../users-scope";
 import { RoleBadge } from "./role-badge";
 import { UserRowActions, type UserActions } from "./user-row-actions";
 
@@ -41,12 +42,10 @@ const NO_ROWS: User[] = [];
 export function UsersTable({
   users,
   actions,
-  canManage,
   isLoading,
 }: {
   users: User[] | undefined;
   actions: UserActions;
-  canManage: boolean;
   isLoading: boolean;
 }) {
   const columns = useMemo(
@@ -93,17 +92,20 @@ export function UsersTable({
         helper.display({
           id: "actions",
           header: "",
-          cell: (info) =>
-            canManage ? (
-              <div className="flex justify-end">
-                <UserRowActions user={info.row.original} actions={actions} />
-              </div>
-            ) : null,
+          cell: (info) => (
+            <ActionsCell user={info.row.original} actions={actions} />
+          ),
         }),
       ]),
-    [actions, canManage],
+    [actions],
   );
 
+  // `columns` não pode depender de quem pode gerenciar. Recriá-lo troca a
+  // identidade do `table`, e com ela o componente `table.FlexRender` — React lê
+  // isso como outro tipo, desmonta a árvore e recria cada célula. O papel chega
+  // depois da lista (`/auth/me` resolve depois de `/users`), então a tabela
+  // inteira era remontada assim que a sessão respondia. Quem pode gerenciar é
+  // decidido dentro da célula, que lê o escopo.
   const table = useTable({ features, columns, data: users ?? NO_ROWS });
 
   return (
@@ -143,6 +145,20 @@ export function UsersTable({
           ) : null}
         </TableBody>
       </Table>
+    </div>
+  );
+}
+
+function ActionsCell({ user, actions }: { user: User; actions: UserActions }) {
+  const { canManage } = useUsersScope();
+
+  if (!canManage) {
+    return null;
+  }
+
+  return (
+    <div className="flex justify-end">
+      <UserRowActions user={user} actions={actions} />
     </div>
   );
 }

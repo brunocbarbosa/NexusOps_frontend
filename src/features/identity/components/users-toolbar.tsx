@@ -25,7 +25,8 @@ export function UsersToolbar({
   onRoleChange,
   includeDeleted,
   onIncludeDeletedChange,
-  isAdmin,
+  canManage,
+  canIncludeDeleted,
   onCreate,
 }: {
   search: string;
@@ -34,7 +35,8 @@ export function UsersToolbar({
   onRoleChange: (value: AssignableRole | undefined) => void;
   includeDeleted: boolean;
   onIncludeDeletedChange: (value: boolean) => void;
-  isAdmin: boolean;
+  canManage: boolean;
+  canIncludeDeleted: boolean;
   onCreate: () => void;
 }) {
   return (
@@ -73,9 +75,10 @@ export function UsersToolbar({
         </SelectContent>
       </Select>
 
-      {/* Só ADMIN: para os demais o backend responde 403 em vez de fingir que
-          não há desativados — e um controle que sempre falha é pior que nenhum. */}
-      {isAdmin ? (
+      {/* Um AGENT que peça `includeDeleted=true` recebe 403, em vez de a lista
+          filtrada — e um controle que sempre falha é pior que nenhum. Para o
+          operador da plataforma é sempre permitido: restaurar exige achar. */}
+      {canIncludeDeleted ? (
         <div className="flex items-center gap-2">
           <Switch
             id="include-deleted"
@@ -88,7 +91,7 @@ export function UsersToolbar({
         </div>
       ) : null}
 
-      {isAdmin ? (
+      {canManage ? (
         <Button onClick={onCreate}>
           <PlusIcon aria-hidden />
           New user

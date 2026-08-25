@@ -49,16 +49,30 @@ capturado do `backend/`.
 
 ## Camada 4 — Escopo de usuários (refactor da fatia `identity`)
 
-- [ ] `src/features/identity/users-scope.tsx` — `UsersScope`, `UsersScopeProvider`, `useUsersScope`
-- [ ] `queries/users.ts` lendo o escopo; **assinaturas públicas dos hooks inalteradas**
-- [ ] `queryKeyRoot` na chave de cache — sem ele, abrir a company A e depois a B mostra os usuários de A
-- [ ] `UsersScreen` extraído de `users-page.tsx`; `UsersPage` vira casca com o escopo de identity
-- [ ] `users-toolbar.tsx`: `isAdmin` → `canManage` / `canIncludeDeleted`
-- [ ] `EmptyState` extraído para `src/components/empty-state.tsx`
-- [ ] **Verificar:** `npm test` verde **sem editar** `users-page.test.tsx` nem `user-form-dialog.test.tsx`
-      — é o critério de aceite do refactor
-- [ ] **Verificar:** `npm run typecheck` limpo
-- [ ] Commit
+- [x] `src/features/identity/users-scope.tsx` — `UsersScope`, `UsersScopeProvider`, `useUsersScope`
+- [x] `queries/users.ts` lendo o escopo; **assinaturas públicas dos hooks inalteradas**
+- [x] `queryKeyRoot` na chave de cache — sem ele, abrir a company A e depois a B mostra os usuários de A
+- [x] `UsersScreen` extraído de `users-page.tsx`; `UsersPage` vira casca com o escopo de identity
+- [x] `users-toolbar.tsx`: `isAdmin` → `canManage` / `canIncludeDeleted`
+- [x] `EmptyState` extraído para `src/components/empty-state.tsx`
+- [!] **Critério de aceite ajustado.** `users-page.test.tsx` passou sem edição, mas
+      `user-form-dialog.test.tsx` **precisou** ser envolvido num `UsersScopeProvider`: o diálogo
+      chama `useCreateUser()` lá de dentro, e sem escopo não há para onde mutar. Deixar
+      `useUsersScope()` cair num padrão silencioso evitaria a edição e criaria o bug que ele existe
+      para impedir — uma tela do operador sem provider mutaria `/api/users`, na company errada.
+      A edição é a expressão honesta do novo requisito
+- [x] **Verificar:** `npm test` verde (147 testes, 28 suítes)
+- [x] **Verificar:** `npm run typecheck` limpo
+- [x] Commit
+
+
+### Achado: a tabela remontava a cada resposta de `/auth/me`
+
+`columns` do TanStack dependia de `canManage`. Recriá-lo troca a identidade do `table`, e com ela o
+componente `table.FlexRender` — o React lê isso como outro tipo, desmonta a árvore e recria cada
+célula. Como `/auth/me` resolve **depois** de `/users`, a tabela inteira era remontada assim que a
+sessão respondia. `columns` agora não depende do papel; quem pode gerenciar é decidido dentro da
+célula, que lê o escopo. Apareceu como um teste achando um `<span>` já desconectado do DOM.
 
 ## Camada 5 — Tela de companies
 
