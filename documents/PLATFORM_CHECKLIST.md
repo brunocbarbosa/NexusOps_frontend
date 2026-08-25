@@ -101,12 +101,12 @@ onde `Element` não existe, e sem a guarda as 17 suítes de handler quebram na i
 
 ## Camada 6 — Usuários de uma company
 
-- [ ] Rota `/platform/companies/[companyId]/users`
-- [ ] Cabeçalho com o nome da company (`GET /api/platform/companies/:id`) e link "← Companies"
-- [ ] `<UsersScreen />` sob escopo do operador (`canManage` e `canIncludeDeleted` sempre verdadeiros)
-- [ ] 404 da company rende "not found" — **nunca** "existe em outro tenant"
-- [ ] **Verificar:** `npm test` verde
-- [ ] Commit
+- [x] Rota `/platform/companies/[companyId]/users`
+- [x] Cabeçalho com o nome da company (`GET /api/platform/companies/:id`) e link "← Companies"
+- [x] `<UsersScreen />` sob escopo do operador (`canManage` e `canIncludeDeleted` sempre verdadeiros)
+- [x] 404 da company rende "not found" — **nunca** "existe em outro tenant"
+- [x] **Verificar:** `npm test` verde (170 testes, 31 suítes)
+- [x] Commit
 
 ## Camada 7 — Navegação e roteamento por papel
 
