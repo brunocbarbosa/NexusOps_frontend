@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { isAssignableRole } from "@/features/identity/types";
 import { pickStrings, readJsonBody } from "@/lib/api/payload";
+import { paginationSearchParams } from "@/lib/api/query";
 import { jsonError, proxyToApi } from "@/lib/api/route-proxy";
 
 /**
@@ -14,27 +15,11 @@ import { jsonError, proxyToApi } from "@/lib/api/route-proxy";
  */
 export async function GET(request: NextRequest): Promise<Response> {
   const incoming = request.nextUrl.searchParams;
-  const searchParams = new URLSearchParams();
-
-  const page = positiveInteger(incoming.get("page"));
-  if (page) {
-    searchParams.set("page", String(page));
-  }
-
-  const perPage = positiveInteger(incoming.get("perPage"));
-  if (perPage) {
-    // Teto do backend. Mandar mais é 400, não um clamp silencioso.
-    searchParams.set("perPage", String(Math.min(perPage, 100)));
-  }
+  const searchParams = paginationSearchParams(incoming);
 
   const role = incoming.get("role");
   if (isAssignableRole(role)) {
     searchParams.set("role", role);
-  }
-
-  const search = incoming.get("search")?.trim();
-  if (search) {
-    searchParams.set("search", search);
   }
 
   if (incoming.get("includeDeleted") === "true") {
@@ -63,10 +48,4 @@ export async function POST(request: Request): Promise<Response> {
         // de propósito. Mandar string vazia seria 400.
         { email: payload.email, password: payload.password },
   });
-}
-
-function positiveInteger(value: string | null): number | null {
-  const parsed = Number(value);
-
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }

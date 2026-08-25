@@ -34,18 +34,18 @@ capturado do `backend/`.
 
 ## Camada 3 — Superfície do BFF
 
-- [ ] `pickBooleans()` em `src/lib/api/payload.ts` (`isActive` é booleano; `pickStrings` não serve)
-- [ ] `api/platform/companies/route.ts` — GET (query remontada campo a campo) e POST (corpo **aninhado**)
-- [ ] `api/platform/companies/[companyId]/route.ts` — GET, PATCH, DELETE
-- [ ] `api/platform/companies/[companyId]/users/route.ts` — GET, POST
-- [ ] `api/platform/companies/[companyId]/users/[userId]/route.ts` — PATCH, DELETE
-- [ ] `api/platform/companies/[companyId]/users/[userId]/restore/route.ts` — POST
-- [ ] `isActive` na query só é encaminhado quando vale exatamente `"true"` ou `"false"` (ausente = os dois)
-- [ ] `perPage` com teto 100 (101 é **400** no backend, não clamp)
-- [ ] Um `route.test.ts` por handler (`@jest-environment node` + `cookie-jar`)
-- [ ] **Verificar:** `npm test` verde
-- [ ] **Verificar:** `npm run lint` limpo (roda `next typegen`, que gera os `RouteContext<>` novos)
-- [ ] Commit
+- [x] `pickBooleans()` em `src/lib/api/payload.ts` (`isActive` é booleano; `pickStrings` não serve)
+- [x] `api/platform/companies/route.ts` — GET (query remontada campo a campo) e POST (corpo **aninhado**)
+- [x] `api/platform/companies/[companyId]/route.ts` — GET, PATCH, DELETE
+- [x] `api/platform/companies/[companyId]/users/route.ts` — GET, POST
+- [x] `api/platform/companies/[companyId]/users/[userId]/route.ts` — PATCH, DELETE
+- [x] `api/platform/companies/[companyId]/users/[userId]/restore/route.ts` — POST
+- [x] `isActive` na query só é encaminhado quando vale exatamente `"true"` ou `"false"` (ausente = os dois)
+- [x] `perPage` com teto 100 (101 é **400** no backend, não clamp)
+- [x] Um `route.test.ts` por handler (`@jest-environment node` + `cookie-jar`)
+- [x] **Verificar:** `npm test` verde
+- [x] **Verificar:** `npm run lint` limpo (roda `next typegen`, que gera os `RouteContext<>` novos)
+- [x] Commit
 
 ## Camada 4 — Escopo de usuários (refactor da fatia `identity`)
 
