@@ -118,21 +118,34 @@ onde `Element` não existe, e sem a guarda as 17 suítes de handler quebram na i
 - [x] `src/app/page.tsx`: RSC para "sem cookie → `/login`"; com cookie, `<SessionLanding />` despacha por papel
 - [x] `FALLBACK` de `safeNextPath` vira `/`
 - [x] **Verificar:** `npm test` verde (181 testes, 31 suítes)
-- [x] **Verificar:** `npm run e2e` verde — 11 testes de identity e smoke intactos
+- [!] **Verificação refeita.** O `npm run e2e` daquele commit rodou contra um `.next/standalone`
+      **velho**: a suíte não constrói nada, ela sobe o artefato que já estiver lá. Refeito depois
+      de `npm run build` na camada 8, com os 20 testes verdes
 - [x] Commit
 
 ## Camada 8 — E2E
 
-- [ ] `fake-api.mjs`: login com `tenantDomain: "platform"` devolvendo `role: "ADMIN_MASTER"`
-- [ ] `fake-api.mjs`: companies em memória, semeadas pelo `POST /__reset`
-- [ ] `fake-api.mjs`: rotas `/platform/**` e guard de papel **nos dois sentidos**
-- [ ] `fake-api.mjs`: login recusa company com `isActive: false` com o 401 genérico — sem isso o
+- [x] `fake-api.mjs`: login com `tenantDomain: "platform"` devolvendo `role: "ADMIN_MASTER"`
+- [x] `fake-api.mjs`: companies em memória, semeadas pelo `POST /__reset`
+- [x] `fake-api.mjs`: rotas `/platform/**` e guard de papel **nos dois sentidos**
+- [x] `fake-api.mjs`: login recusa company com `isActive: false` com o 401 genérico — sem isso o
       teste de bloqueio não prova nada
-- [ ] `fake-api.mjs`: 404 no id do tenant de plataforma (o operador não pode se auto-desativar)
-- [ ] `e2e/platform.spec.ts`: operador entra → cria company → vê credenciais → bloqueia → o ADMIN
+- [x] `fake-api.mjs`: 404 no id do tenant de plataforma (o operador não pode se auto-desativar)
+- [x] `e2e/platform.spec.ts`: operador entra → cria company → vê credenciais → bloqueia → o ADMIN
       daquela company toma 401 → desbloqueia → gerencia usuários → apaga com o nome digitado
-- [ ] **Verificar:** `npm run e2e` verde
-- [ ] Commit
+- [x] **Verificar:** `npm run build && npm run e2e` verde — 20 testes
+- [x] Commit
+
+### Dois achados da suíte E2E
+
+**`npm run e2e` não constrói nada.** Ele sobe o `.next/standalone` que já existir, então rodar sem
+`npm run build` antes testa o código da última build — verde por engano. Vale para toda mudança de
+`src/`.
+
+**Os specs não podiam rodar em paralelo.** O dublê é um processo único com estado global, e todo
+spec que o muta começa com `POST /__reset`. Dois arquivos em workers diferentes se atropelavam: o
+reset de um apagava a sessão que o outro tinha acabado de abrir, e a falha aparecia como um login
+que "não redirecionou". `playwright.config.ts` passa a fixar `workers: 1` e `fullyParallel: false`.
 
 ## Camada 9 — Fechamento
 
