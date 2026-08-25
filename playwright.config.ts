@@ -8,13 +8,19 @@ export const fakeApiURL = `http://127.0.0.1:${API_PORT}`;
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+
+  // **Um worker, sempre.** O dublê da API é um único processo com estado global
+  // em memória, e todo spec que o muta começa com `POST /__reset`. Dois
+  // arquivos em paralelo se atropelam: o reset de um apaga a sessão que o outro
+  // acabou de abrir, e a falha aparece como um login que "não redirecionou".
+  // Custou uma investigação; a suíte inteira roda em segundos de qualquer jeito.
+  fullyParallel: false,
 
   // Impede que `test.only` esquecido num commit passe verde na CI mascarando
   // o resto da suíte.
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: process.env.CI ? "github" : "list",
 
   use: {

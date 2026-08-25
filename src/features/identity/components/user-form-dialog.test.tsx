@@ -1,9 +1,31 @@
+import type { ReactElement } from "react";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, parseRequestBody } from "../../../test/http";
 import { renderWithQuery } from "../../../test/query-wrapper";
+import { UsersScopeProvider } from "../users-scope";
 import { UserFormDialog } from "./user-form-dialog";
+
+/**
+ * O diálogo não sabe em qual console está: quem diz para onde mutar é o
+ * `UsersScope`. Estes casos são os do console da empresa — os mesmos do
+ * operador rodariam com `basePath` de company.
+ */
+function renderDialog(ui: ReactElement) {
+  return renderWithQuery(
+    <UsersScopeProvider
+      scope={{
+        basePath: "/api/users",
+        queryKeyRoot: ["identity", "users"],
+        canManage: true,
+        canIncludeDeleted: true,
+      }}
+    >
+      {ui}
+    </UsersScopeProvider>,
+  );
+}
 
 const fetchMock = jest.fn();
 const onClose = jest.fn();
@@ -34,7 +56,7 @@ describe("UserFormDialog — criação", () => {
   it("cria o usuário com o papel padrão REQUESTER", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ id: "u2" }, 201));
 
-    renderWithQuery(<UserFormDialog mode={{ type: "create" }} onClose={onClose} />);
+    renderDialog(<UserFormDialog mode={{ type: "create" }} onClose={onClose} />);
     await fillNewUser();
 
     await waitFor(() => {
@@ -51,7 +73,7 @@ describe("UserFormDialog — criação", () => {
   });
 
   it("barra senha acima de 72 bytes antes de chamar a API", async () => {
-    renderWithQuery(<UserFormDialog mode={{ type: "create" }} onClose={onClose} />);
+    renderDialog(<UserFormDialog mode={{ type: "create" }} onClose={onClose} />);
     await fillNewUser("agent@acme.com", "🔒".repeat(19));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("at most 72 bytes");
@@ -65,7 +87,7 @@ describe("UserFormDialog — criação", () => {
       ),
     );
 
-    renderWithQuery(<UserFormDialog mode={{ type: "create" }} onClose={onClose} />);
+    renderDialog(<UserFormDialog mode={{ type: "create" }} onClose={onClose} />);
     const user = await fillNewUser();
 
     const restoreButton = await screen.findByRole("button", {
@@ -87,7 +109,7 @@ describe("UserFormDialog — criação", () => {
   it("não oferece restaurar no 409 de email simplesmente em uso", async () => {
     fetchMock.mockResolvedValue(conflict("agent@acme.com is already in use"));
 
-    renderWithQuery(<UserFormDialog mode={{ type: "create" }} onClose={onClose} />);
+    renderDialog(<UserFormDialog mode={{ type: "create" }} onClose={onClose} />);
     await fillNewUser();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("already in use");
@@ -107,7 +129,7 @@ describe("UserFormDialog — edição", () => {
   };
 
   it("não expõe campo de senha: senha alheia não se troca por aqui", () => {
-    renderWithQuery(
+    renderDialog(
       <UserFormDialog mode={{ type: "edit", user: existing }} onClose={onClose} />,
     );
 
@@ -117,7 +139,7 @@ describe("UserFormDialog — edição", () => {
   it("manda só email e papel no PATCH", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ ...existing, email: "new@acme.com" }));
 
-    renderWithQuery(
+    renderDialog(
       <UserFormDialog mode={{ type: "edit", user: existing }} onClose={onClose} />,
     );
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { fetchJson, fetchVoid, jsonBody } from "@/lib/api/client";
 
-import type { SessionUser, User } from "../types";
+import type { AuthUser, SessionUser } from "../types";
 import { identityKeys } from "./keys";
 
 /**
@@ -34,7 +34,7 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: (credentials: Credentials) =>
-      fetchJson<{ user: User }>("/api/auth/login", {
+      fetchJson<{ user: AuthUser }>("/api/auth/login", {
         method: "POST",
         ...jsonBody(credentials),
       }),

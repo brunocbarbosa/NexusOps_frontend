@@ -3,7 +3,12 @@
 import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { KeyRoundIcon, UsersIcon, type LucideIcon } from "lucide-react";
+import {
+  Building2Icon,
+  KeyRoundIcon,
+  UsersIcon,
+  type LucideIcon,
+} from "lucide-react";
 
 import { BrandWordmark } from "@/components/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -12,7 +17,7 @@ import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils";
 
 import { useSession } from "../queries/session";
-import type { SessionUser, UserRole } from "../types";
+import type { Role, SessionUser } from "../types";
 import { UserMenu } from "./user-menu";
 
 interface NavItem {
@@ -20,14 +25,31 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   /** `undefined` significa qualquer papel autenticado. */
-  roles?: readonly UserRole[];
+  roles?: readonly Role[];
 }
 
 const NAV: readonly NavItem[] = [
+  // O console do operador. Os papéis não são hierárquicos: quem não é
+  // ADMIN_MASTER recebe 403 em todo `/platform/**`.
+  {
+    href: "/platform/companies",
+    label: "Companies",
+    icon: Building2Icon,
+    roles: ["ADMIN_MASTER"],
+  },
   // Listar usuários é ADMIN ou AGENT; um REQUESTER receberia 403, então o item
-  // nem aparece para ele.
+  // nem aparece para ele. O operador também não entra aqui — ele chega aos
+  // usuários de uma company por `/platform/companies/:id/users`.
   { href: "/users", label: "Users", icon: UsersIcon, roles: ["ADMIN", "AGENT"] },
-  { href: "/account", label: "Account", icon: KeyRoundIcon },
+  // Escondido do operador: `PlatformBootstrapService` reconcilia o email e a
+  // senha dele a partir do `.env` do backend a cada boot, então uma troca feita
+  // pela API seria revertida no próximo restart.
+  {
+    href: "/account",
+    label: "Account",
+    icon: KeyRoundIcon,
+    roles: ["ADMIN", "AGENT", "REQUESTER"],
+  },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -80,7 +102,11 @@ function NavLinks({ user }: { user: SessionUser | undefined }) {
     <>
       {NAV.filter((item) => !item.roles || (user && item.roles.includes(user.role))).map(
         (item) => {
-          const active = pathname === item.href;
+          // Por prefixo, não por igualdade: `/platform/companies/:id/users` é
+          // a mesma seção que `/platform/companies`. O `/` no fim evita que
+          // `/users` case com `/users-outra-coisa`.
+          const active =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
             <Link

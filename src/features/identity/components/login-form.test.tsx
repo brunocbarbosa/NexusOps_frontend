@@ -67,6 +67,85 @@ describe("LoginForm", () => {
     });
   });
 
+  it("entra como operador com o domínio reservado, sem ninguém digitá-lo", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        user: { id: "op", email: "admin@nexusops.local", role: "ADMIN_MASTER" },
+      }),
+    );
+
+    renderWithQuery(<LoginForm next="/" />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByLabelText("Sign in as platform operator"));
+    await user.type(screen.getByLabelText("Email"), "admin@nexusops.local");
+    await user.type(screen.getByLabelText("Password"), "correct horse battery");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(parseRequestBody(init)).toEqual({
+      tenantDomain: "platform",
+      email: "admin@nexusops.local",
+      password: "correct horse battery",
+    });
+
+    // E vai para o console dele, não para /users.
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/platform/companies");
+    });
+  });
+
+  it("trava o campo de domínio ao marcar a caixinha", async () => {
+    renderWithQuery(<LoginForm next="/users" />);
+    const user = userEvent.setup();
+
+    const field = screen.getByLabelText("Company domain");
+    await user.type(field, "acme.com");
+    expect(field).toBeEnabled();
+
+    await user.click(screen.getByLabelText("Sign in as platform operator"));
+
+    expect(field).toBeDisabled();
+    expect(field).toHaveValue("platform");
+  });
+
+  it("devolve o que estava digitado ao desmarcar", async () => {
+    renderWithQuery(<LoginForm next="/users" />);
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText("Company domain"), "acme.com");
+    const checkbox = screen.getByLabelText("Sign in as platform operator");
+    await user.click(checkbox);
+    await user.click(checkbox);
+
+    const field = screen.getByLabelText("Company domain");
+    expect(field).toBeEnabled();
+    expect(field).toHaveValue("acme.com");
+  });
+
+  it("não exige domínio quando a caixinha está marcada", async () => {
+    // O campo está travado: cobrar preenchimento seria cobrar o impossível.
+    fetchMock.mockResolvedValue(
+      jsonResponse({ message: "Invalid credentials", statusCode: 401 }, 401),
+    );
+
+    renderWithQuery(<LoginForm next="/users" />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByLabelText("Sign in as platform operator"));
+    await user.type(screen.getByLabelText("Email"), "admin@nexusops.local");
+    await user.type(screen.getByLabelText("Password"), "seja o que for");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+    expect(screen.queryByText("Company domain is required.")).not.toBeInTheDocument();
+  });
+
   it("exibe a mensagem única do 401 sem sugerir qual campo falhou", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse({ message: "Invalid credentials", statusCode: 401 }, 401),

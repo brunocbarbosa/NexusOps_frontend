@@ -46,7 +46,10 @@ export function proxy(request: NextRequest): NextResponse {
 
   if (signedIn && isLogin) {
     const url = request.nextUrl.clone();
-    url.pathname = "/users";
+    // A raiz, não `/users`: existem dois consoles, e daqui não dá para saber
+    // qual é o desta pessoa — o proxy só enxerga a presença do cookie. Quem
+    // despacha por papel é `/`.
+    url.pathname = "/";
     url.search = "";
 
     return applySecurityHeaders(NextResponse.redirect(url));
