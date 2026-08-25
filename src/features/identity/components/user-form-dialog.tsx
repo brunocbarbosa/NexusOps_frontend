@@ -25,7 +25,7 @@ import { ApiError } from "@/lib/api/errors";
 
 import { parseDeactivatedUserId } from "../api-messages";
 import { useCreateUser, useRestoreUser, useUpdateUser } from "../queries/users";
-import { USER_ROLES, type User, type UserRole } from "../types";
+import { ASSIGNABLE_ROLES, type User, type AssignableRole } from "../types";
 import {
   PASSWORD_MAX_BYTES,
   passwordByteLength,
@@ -33,7 +33,7 @@ import {
   validatePassword,
 } from "../validation";
 
-const ROLE_HINTS: Record<UserRole, string> = {
+const ROLE_HINTS: Record<AssignableRole, string> = {
   ADMIN: "Manages every user in the company.",
   AGENT: "Works tickets and can list users.",
   REQUESTER: "Opens tickets. The safe default.",
@@ -87,7 +87,7 @@ function UserForm({
 
   const [email, setEmail] = useState(editing?.email ?? "");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>(editing?.role ?? "REQUESTER");
+  const [role, setRole] = useState<AssignableRole>(editing?.role ?? "REQUESTER");
   const [fieldError, setFieldError] = useState<string | null>(null);
 
   const create = useCreateUser();
@@ -182,12 +182,12 @@ function UserForm({
 
         <div className="grid gap-2">
           <Label htmlFor="user-role">Role</Label>
-          <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
+          <Select value={role} onValueChange={(value) => setRole(value as AssignableRole)}>
             <SelectTrigger id="user-role" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {USER_ROLES.map((option) => (
+              {ASSIGNABLE_ROLES.map((option) => (
                 <SelectItem key={option} value={option}>
                   {option.charAt(0) + option.slice(1).toLowerCase()}
                 </SelectItem>

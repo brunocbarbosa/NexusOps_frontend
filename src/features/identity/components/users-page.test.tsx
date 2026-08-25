@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse } from "../../../test/http";
 import { renderWithQuery } from "../../../test/query-wrapper";
-import type { UserRole } from "../types";
+import type { Role } from "../types";
 import { UsersPage } from "./users-page";
 
 const fetchMock = jest.fn();
@@ -32,7 +32,7 @@ const users = [
 
 /** Roteia por URL: a tela busca a sessão e a listagem ao mesmo tempo. */
 function serve(options: {
-  role?: UserRole;
+  role?: Role;
   usersStatus?: number;
   total?: number;
   totalPages?: number;

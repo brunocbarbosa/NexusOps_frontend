@@ -12,7 +12,7 @@ import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils";
 
 import { useSession } from "../queries/session";
-import type { SessionUser, UserRole } from "../types";
+import type { Role, SessionUser } from "../types";
 import { UserMenu } from "./user-menu";
 
 interface NavItem {
@@ -20,7 +20,7 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   /** `undefined` significa qualquer papel autenticado. */
-  roles?: readonly UserRole[];
+  roles?: readonly Role[];
 }
 
 const NAV: readonly NavItem[] = [

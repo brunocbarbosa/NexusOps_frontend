@@ -20,17 +20,17 @@ capturado do `backend/`.
 
 ## Camada 2 — Papéis: separar exibir de atribuir
 
-- [ ] `ASSIGNABLE_ROLES` (três) e `ROLES` (quatro) em `src/features/identity/types.ts`
-- [ ] `AssignableRole` × `Role`; `isUserRole` → `isAssignableRole`
-- [ ] `User.role: AssignableRole` — nenhuma listagem devolve `ADMIN_MASTER`
-- [ ] `SessionUser.role: Role` e o `{ user }` de `useLogin()` com `Role` — os dois carregam o operador
-- [ ] `role-badge.tsx` com quatro entradas (`ADMIN_MASTER` → "Platform operator")
-- [ ] `users-toolbar.tsx` e `user-form-dialog.tsx` iterando `ASSIGNABLE_ROLES`
-- [ ] `app-shell.tsx` com `NavItem.roles: readonly Role[]`
-- [ ] `src/app/api/users/route.ts` usando `isAssignableRole`
-- [ ] **Verificar:** `npm run typecheck` limpo
-- [ ] **Verificar:** `npm test` verde
-- [ ] Commit
+- [x] `ASSIGNABLE_ROLES` (três) e `ROLES` (quatro) em `src/features/identity/types.ts`
+- [x] `AssignableRole` × `Role`; `isUserRole` → `isAssignableRole`
+- [x] `User.role: AssignableRole` — nenhuma listagem devolve `ADMIN_MASTER`
+- [x] `SessionUser.role: Role` e o `{ user }` de `useLogin()` com `Role` — os dois carregam o operador
+- [x] `role-badge.tsx` com quatro entradas (`ADMIN_MASTER` → "Platform operator")
+- [x] `users-toolbar.tsx` e `user-form-dialog.tsx` iterando `ASSIGNABLE_ROLES`
+- [x] `app-shell.tsx` com `NavItem.roles: readonly Role[]`
+- [x] `src/app/api/users/route.ts` usando `isAssignableRole`
+- [x] **Verificar:** `npm run typecheck` limpo
+- [x] **Verificar:** `npm test` verde
+- [x] Commit
 
 ## Camada 3 — Superfície do BFF
 

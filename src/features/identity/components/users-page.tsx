@@ -8,7 +8,7 @@ import { ApiError } from "@/lib/api/errors";
 
 import { useSession } from "../queries/session";
 import { useUsers } from "../queries/users";
-import type { User, UserRole, UsersQuery } from "../types";
+import type { AssignableRole, User, UsersQuery } from "../types";
 import { UserConfirmDialog, type ConfirmAction } from "./user-confirm-dialog";
 import { UserFormDialog, type UserFormMode } from "./user-form-dialog";
 import { UsersTable } from "./users-table";
@@ -94,7 +94,7 @@ export function UsersPage() {
         search={search}
         onSearchChange={setSearch}
         role={query.role}
-        onRoleChange={(role: UserRole | undefined) => setFilter({ role })}
+        onRoleChange={(role: AssignableRole | undefined) => setFilter({ role })}
         includeDeleted={query.includeDeleted}
         onIncludeDeletedChange={(includeDeleted) => setFilter({ includeDeleted })}
         isAdmin={Boolean(isAdmin)}

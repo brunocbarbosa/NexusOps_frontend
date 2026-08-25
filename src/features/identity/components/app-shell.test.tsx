@@ -2,7 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 
 import { jsonResponse } from "../../../test/http";
 import { renderWithQuery } from "../../../test/query-wrapper";
-import type { UserRole } from "../types";
+import type { Role } from "../types";
 import { AppShell } from "./app-shell";
 
 const mockReplace = jest.fn();
@@ -20,7 +20,7 @@ beforeEach(() => {
   globalThis.fetch = fetchMock;
 });
 
-function signedInAs(role: UserRole) {
+function signedInAs(role: Role) {
   fetchMock.mockResolvedValue(
     jsonResponse({ id: "u1", tenantId: "t1", email: "admin@acme.com", role }),
   );

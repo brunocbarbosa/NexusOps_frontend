@@ -10,7 +10,7 @@ import {
 
 import { fetchJson, fetchVoid, jsonBody } from "@/lib/api/client";
 
-import type { User, UserRole, UsersPage, UsersQuery } from "../types";
+import type { AssignableRole, User, UsersPage, UsersQuery } from "../types";
 import { identityKeys } from "./keys";
 
 export function usersSearchParams(query: UsersQuery): string {
@@ -47,7 +47,7 @@ export function useUsers(query: UsersQuery) {
 export interface CreateUserInput {
   email: string;
   password: string;
-  role: UserRole;
+  role: AssignableRole;
 }
 
 export function useCreateUser(): UseMutationResult<User, Error, CreateUserInput> {
@@ -59,7 +59,7 @@ export function useCreateUser(): UseMutationResult<User, Error, CreateUserInput>
 export interface UpdateUserInput {
   id: string;
   email?: string;
-  role?: UserRole;
+  role?: AssignableRole;
 }
 
 export function useUpdateUser(): UseMutationResult<User, Error, UpdateUserInput> {

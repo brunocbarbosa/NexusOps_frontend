@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-import { USER_ROLES, type UserRole } from "../types";
+import { ASSIGNABLE_ROLES, type AssignableRole } from "../types";
 
 const ANY_ROLE = "ANY";
 
@@ -30,8 +30,8 @@ export function UsersToolbar({
 }: {
   search: string;
   onSearchChange: (value: string) => void;
-  role: UserRole | undefined;
-  onRoleChange: (value: UserRole | undefined) => void;
+  role: AssignableRole | undefined;
+  onRoleChange: (value: AssignableRole | undefined) => void;
   includeDeleted: boolean;
   onIncludeDeletedChange: (value: boolean) => void;
   isAdmin: boolean;
@@ -57,7 +57,7 @@ export function UsersToolbar({
       <Select
         value={role ?? ANY_ROLE}
         onValueChange={(value) =>
-          onRoleChange(value === ANY_ROLE ? undefined : (value as UserRole))
+          onRoleChange(value === ANY_ROLE ? undefined : (value as AssignableRole))
         }
       >
         <SelectTrigger className="w-40" aria-label="Filter by role">
@@ -65,7 +65,7 @@ export function UsersToolbar({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={ANY_ROLE}>Any role</SelectItem>
-          {USER_ROLES.map((option) => (
+          {ASSIGNABLE_ROLES.map((option) => (
             <SelectItem key={option} value={option}>
               {option.charAt(0) + option.slice(1).toLowerCase()}
             </SelectItem>

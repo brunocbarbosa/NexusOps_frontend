@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 
-import { isUserRole } from "@/features/identity/types";
+import { isAssignableRole } from "@/features/identity/types";
 import { pickStrings, readJsonBody } from "@/lib/api/payload";
 import { jsonError, proxyToApi } from "@/lib/api/route-proxy";
 
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 
   const role = incoming.get("role");
-  if (isUserRole(role)) {
+  if (isAssignableRole(role)) {
     searchParams.set("role", role);
   }
 
