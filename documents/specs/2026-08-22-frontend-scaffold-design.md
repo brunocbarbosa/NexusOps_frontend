@@ -4,8 +4,7 @@
 
 Documento de design do scaffold inicial. O objetivo geral do produto está em
 [`../MAIN.md`](../MAIN.md); a stack e a arquitetura em
-[`../MAIN_FRONTEND.md`](../MAIN_FRONTEND.md). O progresso da execução é rastreado em
-[`../SCAFFOLD_CHECKLIST.md`](../SCAFFOLD_CHECKLIST.md).
+[`../MAIN_FRONTEND.md`](../MAIN_FRONTEND.md).
 
 ## 1. O que esta entrega é
 
