@@ -149,19 +149,22 @@ que "não redirecionou". `playwright.config.ts` passa a fixar `workers: 1` e `fu
 
 ## Camada 9 — Fechamento
 
-- [ ] `documents/TESTE_MANUAL.md` — sai o `curl` para `/auth/register` (responde 404); entra o
+- [x] `documents/TESTE_MANUAL.md` — sai o `curl` para `/auth/register` (responde 404); entra o
       operador vindo de `ADMIN_MASTER_EMAIL`/`ADMIN_MASTER_PASSWORD` e o login com domínio `platform`
-- [ ] **Confirmar contra o backend real:** `PATCH /users/me/password` como `ADMIN_MASTER` responde
-      403? E uma senha trocada pela API sobrevive ao restart? (a §6 da spec assume que não)
-- [ ] `CLAUDE.md` — "Estado do repositório" e "Próximo passo"
-- [ ] Este checklist marcado
-- [ ] Commit
+- [!] **Confirmar contra o backend real:** `PATCH /users/me/password` como `ADMIN_MASTER` responde
+      403? E uma senha trocada pela API sobrevive ao restart? A tela de *Account* foi escondida do
+      operador supondo que **não** sobrevive. Bloqueado: exige o NestJS, o Postgres e o Redis no ar,
+      que não estão disponíveis aqui. Está no roteiro manual, e se a suposição estiver errada o item
+      volta ao `NAV` do `app-shell.tsx`
+- [x] `CLAUDE.md` — "Estado do repositório" e "Próximo passo"
+- [x] Este checklist marcado
+- [x] Commit
 
 ---
 
 ## Pendências e avisos
 
-- [ ] **Avisar o Bruno:** `FRONTEND_PLATFORM_SPEC.md` §3 diz que `role` só vale `ADMIN_MASTER` em
+- [!] **Avisar o Bruno:** `FRONTEND_PLATFORM_SPEC.md` §3 diz que `role` só vale `ADMIN_MASTER` em
       `GET /auth/me`, mas o payload capturado em `backend/PLATFORM.md` mostra `POST /auth/login` do
       operador devolvendo `"role": "ADMIN_MASTER"` no corpo. A correção pertence ao repositório de
       origem. O frontend segue o payload capturado — é o que resolve o redirecionamento pós-login

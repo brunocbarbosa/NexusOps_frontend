@@ -1,11 +1,16 @@
-# Roteiro de teste manual — fatia `identity`
+# Roteiro de teste manual — `identity` e `platform`
 
-O que abrir, com que conta, e o que observar em cada tela de login e de usuários. As contas abaixo
-vivem no **banco de desenvolvimento** do backend; um `prisma:reset` leva todas embora, e a seção
-[Semear do zero](#semear-do-zero) recria em meio minuto.
+O que abrir, com que conta, e o que observar em cada tela. As contas abaixo vivem no **banco de
+desenvolvimento** do backend; um `prisma:reset` leva as de company embora, e a seção
+[Semear do zero](#semear-do-zero) recria em meio minuto. **O operador da plataforma não**: ele é
+semeado do `.env` a cada boot e volta sozinho.
 
 O desenho por trás do que este roteiro exercita está em
-[`specs/2026-08-23-identity-login-users-design.md`](./specs/2026-08-23-identity-login-users-design.md).
+[`specs/2026-08-23-identity-login-users-design.md`](./specs/2026-08-23-identity-login-users-design.md)
+e [`specs/2026-08-25-platform-operator-console-design.md`](./specs/2026-08-25-platform-operator-console-design.md).
+
+> **`POST /auth/register` não existe mais.** Responde 404, inclusive com token válido. Companies
+> nascem pelo console do operador — é a mudança que quebrou a versão anterior deste roteiro.
 
 ## Subir as duas pontas
 
@@ -24,6 +29,23 @@ PORT=3001 npm run dev                        # http://localhost:3001
 `npm run build && PORT=3001 NEXUSOPS_API_URL=http://localhost:3000 npm run start:standalone`.
 
 ## As contas
+
+### O operador da plataforma
+
+Não está em company nenhuma e **não nasce por `curl`**: `PlatformBootstrapService` o cria no boot a
+partir de `ADMIN_MASTER_EMAIL` e `ADMIN_MASTER_PASSWORD` do `.env` do backend, e reconcilia os dois
+a cada reinício. É por isso que ele não tem tela de *Account* — uma senha trocada pela API seria
+revertida no próximo boot.
+
+| Campo          | Valor                                              |
+| -------------- | -------------------------------------------------- |
+| Company domain | `platform` — literal, é o domínio reservado        |
+| Email          | o de `ADMIN_MASTER_EMAIL` no `.env` do backend     |
+| Senha          | a de `ADMIN_MASTER_PASSWORD`                       |
+
+Existe **exatamente um**, sempre: um índice único parcial no PostgreSQL recusa o segundo.
+
+### As contas de company
 
 Todas no tenant **`acme.com`** — é o que vai no campo *Company domain* do login.
 
@@ -47,6 +69,9 @@ Todas no tenant **`acme.com`** — é o que vai no campo *Company domain* do log
   a tela não tenta ser mais esperta que ele.
 - Deixe os campos vazios: a validação é local, e nada é enviado.
 - Entre com `admin@acme.com`. Você cai em `/users`.
+- Saia e entre como o operador, com o domínio `platform`. Você cai em **`/platform/companies`** —
+  mesmo formulário, destino diferente. O menu mostra *Companies* e **não** mostra *Users* nem
+  *Account*: os papéis não são hierárquicos, e ele toma 403 em `/users`.
 
 ### Papéis
 
@@ -54,6 +79,35 @@ Todas no tenant **`acme.com`** — é o que vai no campo *Company domain* do log
 - Entre como `requester@acme.com`: *Users* some do menu lateral. Vá em `http://localhost:3001/users`
   na barra de endereço — a tela explica que a listagem é de admins e agentes, em vez de mostrar um
   erro cru. É um **403**, e é diferente de 404 de propósito.
+
+### O console do operador
+
+Entre com o domínio `platform`.
+
+- **Bloquear.** Desmarque a caixinha *Active* da `Acme Inc`. Ela não muta no clique: confirma
+  primeiro, e o texto diz que ninguém daquela empresa vai conseguir entrar e que dá para desfazer.
+  Confirme, saia, e tente entrar como `admin@acme.com` → `Invalid credentials`, **a mesma** mensagem
+  de senha errada. Uma empresa suspensa é indistinguível de um erro de digitação, de propósito.
+  Volte como operador e remarque para devolver o acesso.
+- **Criar company.** *New company* pede empresa e primeiro administrador no mesmo formulário — a API
+  recusa criar uma sem ADMIN, porque nela ninguém entraria e ninguém criaria o primeiro usuário. No
+  sucesso o diálogo mostra as credenciais e **não fecha sozinho**: não há email de convite nem reset
+  de senha, então é a única vez que aquela senha aparece. Copie e entre com ela noutra aba.
+- **Domínio repetido.** Tente criar outra com `acme.com` → `The domain "acme.com" is already
+  registered`. Tente com o domínio `platform` → 400, ele é reservado.
+- **Usuários de uma company.** Menu de ações da linha → *Manage users*. É a mesma tela de `/users`,
+  com o nome da company no topo. O operador cria, edita, desativa, restaura e enxerga desativados
+  sempre — ele não é ADMIN de company nenhuma, e restaurar exige achar primeiro.
+- **Apagar.** *Delete permanently* exige **digitar o nome** da company e oferece bloquear no meio do
+  caminho. Some com usuários, chamados e auditoria por cascade, sem restore e sem undo — só faça
+  numa company descartável.
+- **403 como estado.** Ainda logado como `admin@acme.com`, digite `/platform/companies` na barra de
+  endereço: a tela explica que aquilo é do operador, em vez de mostrar erro cru. E como operador,
+  `/users` faz o mesmo no sentido contrário.
+
+**A confirmar contra a API real:** `PATCH /users/me/password` como `ADMIN_MASTER` responde 403? E
+uma senha trocada por lá sobrevive ao restart? A tela de *Account* foi escondida dele supondo que
+**não** — se estiver errado, o item volta ao menu.
 
 ### O 409 que tem saída
 
@@ -103,11 +157,18 @@ serializada de propósito — ver §3.2 da spec.
 Depois de um `prisma:reset`, com o backend no ar:
 
 ```bash
-# 1. o tenant e o primeiro ADMIN nascem juntos; é o único caminho para os dois existirem
-curl -s -X POST http://localhost:3000/auth/register -H 'content-type: application/json' \
-  -d '{"tenantName":"Acme Inc","tenantDomain":"acme.com","email":"admin@acme.com","password":"correct horse battery"}'
+# 1. a company e o primeiro ADMIN nascem juntos, e agora quem os cria é o operador.
+#    Pela UI: entre com o domínio `platform` e use *New company*. Por curl:
+OP=$(curl -s -X POST http://localhost:3000/auth/login -H 'content-type: application/json' \
+  -d '{"tenantDomain":"platform","email":"'"$ADMIN_MASTER_EMAIL"'","password":"'"$ADMIN_MASTER_PASSWORD"'"}' \
+  | grep -o '"accessToken":"[^"]*"' | cut -d'"' -f4)
 
-# 2. um token de admin para as chamadas seguintes
+curl -s -X POST http://localhost:3000/platform/companies -H "authorization: Bearer $OP" \
+  -H 'content-type: application/json' \
+  -d '{"name":"Acme Inc","domain":"acme.com","admin":{"email":"admin@acme.com","password":"correct horse battery"}}'
+
+# 2. um token de admin **da company** para as chamadas seguintes — o do operador
+#    recebe 403 em /users, porque os papéis não são hierárquicos
 TOKEN=$(curl -s -X POST http://localhost:3000/auth/login -H 'content-type: application/json' \
   -d '{"tenantDomain":"acme.com","email":"admin@acme.com","password":"correct horse battery"}' \
   | grep -o '"accessToken":"[^"]*"' | cut -d'"' -f4)
@@ -132,6 +193,10 @@ palavras sem o `${= }`. Em bash, `set -- $entry`.
 ## Sem backend nenhum
 
 `npm run e2e` não precisa de nada disso: o Playwright sobe o artefato standalone **e**
-`e2e/support/fake-api.mjs`, um dublê que serve os mesmos caminhos, códigos e envelopes de erro. É o
-que roda na CI. O que ele não substitui é este roteiro — foi contra a API real que apareceu o
-problema de renovação descrito na spec.
+`e2e/support/fake-api.mjs`, um dublê que serve os mesmos caminhos, códigos e envelopes de erro,
+para os dois consoles. É o que roda na CI. O que ele não substitui é este roteiro — foi contra a
+API real que apareceu o problema de renovação descrito na spec.
+
+> **Rode `npm run build` antes.** A suíte E2E não constrói nada: ela sobe o `.next/standalone` que
+> já estiver lá. Sem o build, você testa o código da última vez que alguém buildou — e passa verde
+> por engano.
