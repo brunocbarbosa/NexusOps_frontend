@@ -150,6 +150,22 @@ outro analista, e repetir um 404 não muda a resposta.
 
 ## 5. Verificação
 
+> **Nota de 2026-08-28.** Esta seção descreve o ambiente de 2026-08-23 e ficou desatualizada em dois
+> pontos. O corpo abaixo fica como foi escrito — é o registro do que era verdade quando a fatia foi
+> desenhada —, mas **não o siga**:
+>
+> - **As portas.** O backend passou a escutar na 3333, então não há mais disputa: `NEXUSOPS_API_URL`
+>   aponta para `http://localhost:3333` e o Next fica na 3000, sem `PORT=3001`. Seguir a receita
+>   antiga aponta o frontend para a própria porta dele, e o login falha com um 502 enganoso — hoje um
+>   500, desde que `apiBaseUrl()` deixou de ter default.
+> - **O `curl` de cadastro.** `POST /auth/register` foi removido do backend e responde 404, inclusive
+>   com token válido. Companies nascem no console do operador, e o operador vem de
+>   `ADMIN_MASTER_EMAIL`/`ADMIN_MASTER_PASSWORD` no `.env` do backend.
+>
+> O estado atual está no [`CLAUDE.md`](../../CLAUDE.md) e em
+> [`TESTE_MANUAL.md`](../TESTE_MANUAL.md); o console do operador tem spec própria em
+> [`2026-08-25-platform-operator-console-design.md`](./2026-08-25-platform-operator-console-design.md).
+
 O backend e o Next disputam a porta 3000. Backend em 3000, Next em 3001 (`PORT=3001 npm run dev`),
 com `NEXUSOPS_API_URL=http://localhost:3000`.
 

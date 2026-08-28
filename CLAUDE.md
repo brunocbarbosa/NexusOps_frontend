@@ -136,10 +136,15 @@ Pipeline pronta e exercitada num PR real: GitHub Actions em três workflows (`CI
 `Release`), SonarCloud com Quality Gate que reprova o job, CodeQL, Dependency Review, `npm audit`,
 gitleaks e Dependabot. Os rulesets das duas branches estão aplicados e recusam push direto.
 
-**O `Release` ainda não rodou.** Ele dispara no push de `main`, e nenhum merge `development → main`
-aconteceu até agora — a imagem foi construída e validada localmente (67 MB, uid 1001, `/api/health`
-respondendo, CSS servido com 200), mas nunca publicada no GHCR. O primeiro merge de release é o que
-prova essa metade.
+**O `Release` já rodou, três vezes.** Ele dispara no push de `main`, e cada release de fecho de PR o
+acionou: #10 em 2026-08-23, #16 em 2026-08-25 e #20 em 2026-08-28, todos com sucesso. Publica
+`ghcr.io/brunocbarbosa/nexusops_frontend` — nome derivado do repositório, então com **underscore**,
+não hífen — nas tags `sha-<commit>`, `main` e `latest`, mais um atestado de proveniência de build.
+
+Até 2026-08-28 este parágrafo afirmava o contrário ("ainda não rodou", "nenhum merge
+`development → main` aconteceu"), o que já era falso desde o primeiro release. Vale como aviso: o
+estado descrito aqui envelhece, e `gh run list --workflow=Release` responde em um segundo o que uma
+frase desatualizada faz um agente supor por uma sessão inteira.
 
 **A fatia `identity` está implementada**: login, sessão em cookie `httpOnly`, refresh serializado,
 listagem e administração de usuários, e troca da própria senha. O desenho está em
