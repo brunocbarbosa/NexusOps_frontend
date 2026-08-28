@@ -1,5 +1,5 @@
 import { apiBaseUrl } from "./base-url";
-import { SessionExpiredError } from "./errors";
+import { ConfigurationError, SessionExpiredError } from "./errors";
 import { refreshTokens } from "./refresh";
 import { clearTokens, readTokens, writeTokens } from "./session";
 
@@ -48,7 +48,9 @@ export async function apiFetchPublic(
  *
  * Quando a renovação falha, a sessão acabou de verdade (inclusive no caso em
  * que o reuso do token por outra parte revogou a família inteira): os cookies
- * são apagados e sobe `SessionExpiredError`.
+ * são apagados e sobe `SessionExpiredError`. A única exceção é o
+ * `ConfigurationError`, que sobe intacto: ele diz que este servidor está
+ * quebrado, e apagar a sessão de quem esbarrou nisso puniria a pessoa errada.
  */
 export async function apiFetch(
   path: string,
@@ -113,7 +115,15 @@ async function renew(refreshToken: string | undefined) {
     const pair = await refreshTokens(refreshToken);
     await writeTokens(pair);
     return pair;
-  } catch {
+  } catch (error) {
+    // Servidor mal configurado não é sessão vencida. Sem esta guarda, um
+    // `NEXUSOPS_API_URL` ausente apagava os cookies e deslogava o usuário — o
+    // dano cai sobre quem não tem como consertá-lo, e o operador perde o
+    // sintoma que apontaria para a variável.
+    if (error instanceof ConfigurationError) {
+      throw error;
+    }
+
     await clearTokens();
     throw new SessionExpiredError();
   }
