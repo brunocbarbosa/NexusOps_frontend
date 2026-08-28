@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { SessionExpiredError } from "./errors";
+import { ConfigurationError, SessionExpiredError } from "./errors";
 import { __resetRefreshFlights } from "./refresh";
 import { apiFetch, apiFetchPublic } from "./server";
 
@@ -158,5 +158,23 @@ describe("apiFetchPublic", () => {
     await apiFetchPublic("/auth/login", { method: "POST", body: {} });
 
     expect(authHeaderOf(0)).toBeNull();
+  });
+});
+
+describe("má configuração no caminho de renovação", () => {
+  it("não vira sessão vencida: um servidor mal configurado não pode deslogar ninguém", async () => {
+    const configured = process.env.NEXUSOPS_API_URL;
+    jar.set("nexusops_rt", "refresh-1");
+    delete process.env.NEXUSOPS_API_URL;
+
+    try {
+      // Sem `nexusops_at`, renovar é o primeiro passo — e é dentro do `renew`
+      // que o `catch` engolia tudo como fim de sessão, apagando os cookies de
+      // quem só topou com um `NEXUSOPS_API_URL` ausente.
+      await expect(apiFetch("/users")).rejects.toBeInstanceOf(ConfigurationError);
+      expect(jar.get("nexusops_rt")?.value).toBe("refresh-1");
+    } finally {
+      process.env.NEXUSOPS_API_URL = configured;
+    }
   });
 });
