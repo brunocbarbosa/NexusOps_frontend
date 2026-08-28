@@ -32,6 +32,18 @@ export class SessionExpiredError extends ApiError {
   }
 }
 
+/**
+ * O servidor está mal configurado — não é falha da API, que sequer foi
+ * procurada. Fica fora de `ApiError` de propósito: `ApiError` significa "o
+ * NestJS respondeu isto", e aqui nenhuma resposta existiu.
+ */
+export class ConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConfigurationError";
+  }
+}
+
 export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
 }

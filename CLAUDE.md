@@ -96,8 +96,27 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
   identidade do `table` e do componente `table.FlexRender`; o React lê isso como outro tipo,
   desmonta a árvore e recria cada célula. Como `/auth/me` resolve **depois** da listagem, uma
   coluna que dependesse do papel remontava a tabela inteira ao responder a sessão.
-- **O backend também escuta na 3000.** Em desenvolvimento, backend em 3000 e Next em 3001
-  (`PORT=3001 npm run dev`), com `NEXUSOPS_API_URL=http://localhost:3000` (ver `.env.example`).
+- **O backend escuta na 3333, e o Next na 3000.** `NEXUSOPS_API_URL=http://localhost:3333` (ver
+  `.env.example`); nenhum dos dois precisa ser movido. Apontar `NEXUSOPS_API_URL` para a porta do
+  próprio Next faz o servidor chamar a si mesmo, e a falha **não** se parece com o que é: o
+  `proxy.ts` não conhece `/auth/login`, devolve 307 para `/login`, o `fetch` do Node segue o
+  redirect por padrão e o handler recebe **200 com HTML**. Como `response.ok` é `true`, o
+  `response.json()` estoura, o `catch` do `route-proxy.ts` achata qualquer exceção num 502 e a tela
+  acusa "The NexusOps API is unreachable" — sobre uma API que nunca foi procurada. Antes de 2026-08-28
+  o `.env.example` mandava usar 3000 nos dois e mover o Next para 3001; um `cp .env.example .env.local`
+  seguido de `npm run dev` caía exatamente nisso.
+- **`apiBaseUrl()` não tem default: sem `NEXUSOPS_API_URL` ele lança `ConfigurationError`.** O
+  default óbvio seria a porta do próprio Next, ou seja, a armadilha acima. O `errorResponse` traduz
+  esse erro em **500 com "The NexusOps frontend is misconfigured"** — não 502, que afirmaria que o
+  backend respondeu mal — e escreve o nome da variável no log, não no corpo (quem recebe a resposta
+  pode não estar autenticado). O `renew()` em `server.ts` **deixa esse erro passar** em vez de
+  convertê-lo em `SessionExpiredError`: sem essa guarda, uma variável ausente apagava os cookies e
+  deslogava o usuário por um defeito do servidor.
+- **A suíte depende do `.env.test`, que é versionado.** O Next **não** carrega `.env.local` quando
+  `NODE_ENV=test` (ver `node_modules/next/dist/docs/01-app/02-guides/environment-variables.md`, §Test
+  Environment Variables), então sem `.env.test` os 61 testes que chegam a `server.ts` ou `refresh.ts`
+  lançam `ConfigurationError`. O host é um `.test` da RFC 2606, que nunca resolve: teste que escape
+  do dublê de `fetch` falha na hora em vez de acertar algo vivo em `localhost`.
 - **O TanStack Table 9 é ESM puro.** Ele está em `transpilePackages` no `next.config.ts`; sem isso
   todo teste que renderize a grid morre com `Cannot use import statement outside a module`.
 - **O jsdom não tem `TextEncoder`, a Fetch API, Pointer Events nem `scrollIntoView`.** O

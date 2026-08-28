@@ -14,19 +14,19 @@ e [`specs/2026-08-25-platform-operator-console-design.md`](./specs/2026-08-25-pl
 
 ## Subir as duas pontas
 
-As duas escutam na 3000 por padrão, então o frontend vai para a 3001.
+O backend escuta na 3333 e o frontend na 3000 — nenhum dos dois precisa ser movido.
 
 ```bash
 # no repositório do backend
-npm run infra:up && npm run start:dev        # http://localhost:3000
+npm run infra:up && npm run start:dev        # http://localhost:3333
 
 # aqui
-cp .env.example .env.local                   # NEXUSOPS_API_URL=http://localhost:3000
-PORT=3001 npm run dev                        # http://localhost:3001
+cp .env.example .env.local                   # NEXUSOPS_API_URL=http://localhost:3333
+npm run dev                                  # http://localhost:3000
 ```
 
 `npm run dev` serve o desenvolvimento. Para exercitar exatamente o que a imagem Docker roda:
-`npm run build && PORT=3001 NEXUSOPS_API_URL=http://localhost:3000 npm run start:standalone`.
+`npm run build && NEXUSOPS_API_URL=http://localhost:3333 npm run start:standalone`.
 
 ## As contas
 
@@ -80,7 +80,7 @@ Todas no tenant **`acme.com`** — é o que vai no campo *Company domain* do log
 ### Papéis
 
 - Saia e entre como `agent@acme.com`: a lista aparece, o botão *New user* não.
-- Entre como `requester@acme.com`: *Users* some do menu lateral. Vá em `http://localhost:3001/users`
+- Entre como `requester@acme.com`: *Users* some do menu lateral. Vá em `http://localhost:3000/users`
   na barra de endereço — a tela explica que a listagem é de admins e agentes, em vez de mostrar um
   erro cru. É um **403**, e é diferente de 404 de propósito.
 
@@ -163,32 +163,32 @@ Depois de um `prisma:reset`, com o backend no ar:
 ```bash
 # 1. a company e o primeiro ADMIN nascem juntos, e agora quem os cria é o operador.
 #    Pela UI: entre com o domínio `platform` e use *New company*. Por curl:
-OP=$(curl -s -X POST http://localhost:3000/auth/login -H 'content-type: application/json' \
+OP=$(curl -s -X POST http://localhost:3333/auth/login -H 'content-type: application/json' \
   -d '{"tenantDomain":"platform","email":"'"$ADMIN_MASTER_EMAIL"'","password":"'"$ADMIN_MASTER_PASSWORD"'"}' \
   | grep -o '"accessToken":"[^"]*"' | cut -d'"' -f4)
 
-curl -s -X POST http://localhost:3000/platform/companies -H "authorization: Bearer $OP" \
+curl -s -X POST http://localhost:3333/platform/companies -H "authorization: Bearer $OP" \
   -H 'content-type: application/json' \
   -d '{"name":"Acme Inc","domain":"acme.com","admin":{"email":"admin@acme.com","password":"correct horse battery"}}'
 
 # 2. um token de admin **da company** para as chamadas seguintes — o do operador
 #    recebe 403 em /users, porque os papéis não são hierárquicos
-TOKEN=$(curl -s -X POST http://localhost:3000/auth/login -H 'content-type: application/json' \
+TOKEN=$(curl -s -X POST http://localhost:3333/auth/login -H 'content-type: application/json' \
   -d '{"tenantDomain":"acme.com","email":"admin@acme.com","password":"correct horse battery"}' \
   | grep -o '"accessToken":"[^"]*"' | cut -d'"' -f4)
 
 # 3. as outras quatro contas
 for entry in 'agent@acme.com AGENT' 'helpdesk@acme.com AGENT' 'requester@acme.com REQUESTER' 'deactivated@acme.com REQUESTER'; do
   set -- ${=entry}   # em bash, use: set -- $entry
-  curl -s -X POST http://localhost:3000/users -H "authorization: Bearer $TOKEN" \
+  curl -s -X POST http://localhost:3333/users -H "authorization: Bearer $TOKEN" \
     -H 'content-type: application/json' \
     -d "{\"email\":\"$1\",\"password\":\"another good password\",\"role\":\"$2\"}" -o /dev/null -w "$1 -> %{http_code}\n"
 done
 
 # 4. e uma delas desativada, para o fluxo de restaurar
-ID=$(curl -s "http://localhost:3000/users?search=deactivated" -H "authorization: Bearer $TOKEN" \
+ID=$(curl -s "http://localhost:3333/users?search=deactivated" -H "authorization: Bearer $TOKEN" \
   | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-curl -s -X DELETE "http://localhost:3000/users/$ID" -H "authorization: Bearer $TOKEN" -o /dev/null -w "desativado -> %{http_code}\n"
+curl -s -X DELETE "http://localhost:3333/users/$ID" -H "authorization: Bearer $TOKEN" -o /dev/null -w "desativado -> %{http_code}\n"
 ```
 
 O `set -- ${=entry}` é sintaxe do zsh (o shell deste ambiente): o zsh não divide expansão em

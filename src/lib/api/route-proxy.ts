@@ -1,4 +1,4 @@
-import { SessionExpiredError } from "./errors";
+import { ConfigurationError, SessionExpiredError } from "./errors";
 import { apiFetch, type ApiFetchInit } from "./server";
 
 /**
@@ -7,7 +7,8 @@ import { apiFetch, type ApiFetchInit } from "./server";
  * Repassa status e corpo do NestJS como vieram — inclusive os erros, cujo
  * `message` a UI precisa ler (o 409 que diz qual usuário desativado ocupa o
  * email é o caso motivador). O que este módulo acrescenta é o tratamento das
- * duas falhas que o backend não produz: sessão vencida e API fora do ar.
+ * três falhas que o backend não produz: sessão vencida, API fora do ar e este
+ * servidor mal configurado — que é 500, não 502, e por isso vale distinguir.
  */
 export async function proxyToApi(
   path: string,
@@ -34,6 +35,19 @@ export async function proxyToApi(
 export function errorResponse(error: unknown): Response {
   if (error instanceof SessionExpiredError) {
     return jsonError(401, error.message);
+  }
+
+  if (error instanceof ConfigurationError) {
+    // 500, não 502: 502 afirma que o servidor de trás respondeu mal, e aqui ele
+    // sequer foi procurado — quem está quebrado é este processo. Foi essa
+    // confusão que fez um `NEXUSOPS_API_URL` apontado para a própria porta do
+    // Next ser diagnosticado como "API fora do ar" por tempo demais.
+    //
+    // O detalhe vai para o log, não para o corpo: a mensagem nomeia a variável
+    // de ambiente, e quem recebe esta resposta pode nem estar autenticado.
+    console.error(`[nexusops] ${error.message}`);
+
+    return jsonError(500, "The NexusOps frontend is misconfigured.");
   }
 
   // `fetch` só rejeita por falha de rede; erro HTTP vem como resposta. Um 502
