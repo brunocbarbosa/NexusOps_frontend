@@ -206,7 +206,7 @@ PR into `main` goes ungated on purpose, carrying code the gate already cleared o
 
 **Requirements:** Node.js 24 (same major as the backend), npm, and a running [NexusOps API](https://github.com/brunocbarbosa/NexusOps_backend).
 
-Both servers default to port 3000, so run the API there and Next on 3001. There is no sign-up
+The API listens on port 3333 and Next on 3000, so neither needs to be moved. There is no sign-up
 screen: the first tenant and its first admin come from `POST /auth/register`, which the backend
 exposes and this repository deliberately does not wrap yet.
 
@@ -220,8 +220,8 @@ git clone https://github.com/brunocbarbosa/NexusOps_frontend.git
 cd NexusOps_frontend
 npm install
 
-cp .env.example .env.local   # points at the API — defaults assume http://localhost:3000
-PORT=3001 npm run dev        # http://localhost:3001
+cp .env.example .env.local   # points at the API — defaults assume http://localhost:3333
+npm run dev                  # http://localhost:3000
 ```
 
 ```bash

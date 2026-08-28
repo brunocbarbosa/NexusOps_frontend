@@ -60,3 +60,6 @@ next-env.d.ts
 
 # O `.env*` acima esconderia também o exemplo — que existe justamente para ser lido.
 !.env.example
+# E o `.env.test`, que a doc do Next manda versionar: a suíte precisa dar o mesmo
+# resultado em toda máquina, e `.env.local` não é carregado em NODE_ENV=test.
+!.env.test
