@@ -40,7 +40,7 @@ npm run typecheck
 - [x] **8 · O 409** — `version-conflict-dialog` e a integração nos três PATCH. Teste do ciclo
       completo: conflito → recarregar → reaplicar → versão avança um. Os outros três 409 caem em
       alerta inline.
-- [ ] **9 · Navegação** — item **Tickets** no `NAV` de `app-shell.tsx` (ADMIN, AGENT, REQUESTER) e
+- [x] **9 · Navegação** — item **Tickets** no `NAV` de `app-shell.tsx` (ADMIN, AGENT, REQUESTER) e
       `COMPANY_HOME` de `next-path.ts` passando de `/users` para `/tickets`. Atualizar
       `next-path.test.ts` e `app-shell.test.tsx`.
 - [ ] **10 · Dublê e E2E** — `e2e/support/fake-api.mjs` com tickets, comentários e timeline,
