@@ -34,7 +34,7 @@ npm run typecheck
       `queries/staff.ts`. Sem optimistic update; sucesso grava com `setQueryData`.
 - [x] **6 · Tela `/tickets`** — toolbar com filtros e busca (debounce 300 ms), lista virtualizada com
       scroll infinito, `new-ticket-dialog`. Sem paginador e sem cabeçalho ordenável.
-- [ ] **7 · Tela `/tickets/:id`** — header, detalhes editáveis, ações do agente (status e assignee),
+- [x] **7 · Tela `/tickets/:id`** — header, detalhes editáveis, ações do agente (status e assignee),
       compositor de comentário com o switch de nota interna, feed da timeline. 404 renderiza
       "Ticket not found", não um alerta.
 - [ ] **8 · O 409** — `version-conflict-dialog` e a integração nos três PATCH. Teste do ciclo
