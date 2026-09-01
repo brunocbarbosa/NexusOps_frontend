@@ -14,10 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError } from "@/lib/api/errors";
-
+import { inlineErrorMessage } from "../api-messages";
 import { categoryLabel, priorityLabel } from "../format";
-import { useUpdateTicket } from "../queries/tickets";
+import type { CaptureConflict } from "../queries/conflict";
+import { useUpdateTicket, type UpdateTicketInput } from "../queries/tickets";
 import {
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
@@ -36,7 +36,13 @@ import {
  * Um chamado `CLOSED` recusa este PATCH. O formulário vira leitura em vez de
  * oferecer um botão que sempre falha.
  */
-export function TicketDetailsCard({ ticket }: { ticket: Ticket }) {
+export function TicketDetailsCard({
+  ticket,
+  onConflict,
+}: {
+  ticket: Ticket;
+  onConflict: CaptureConflict;
+}) {
   const [editing, setEditing] = useState(false);
 
   if (ticket.status === "CLOSED" || !editing) {
@@ -71,6 +77,7 @@ export function TicketDetailsCard({ ticket }: { ticket: Ticket }) {
       // vez de sincronizar num efeito.
       key={ticket.version}
       ticket={ticket}
+      onConflict={onConflict}
       onDone={() => {
         setEditing(false);
       }}
@@ -80,9 +87,11 @@ export function TicketDetailsCard({ ticket }: { ticket: Ticket }) {
 
 function TicketDetailsForm({
   ticket,
+  onConflict,
   onDone,
 }: {
   ticket: Ticket;
+  onConflict: CaptureConflict;
   onDone: () => void;
 }) {
   const update = useUpdateTicket(ticket.id);
@@ -92,17 +101,48 @@ function TicketDetailsForm({
   const [priority, setPriority] = useState<TicketPriority>(ticket.priority);
   const [category, setCategory] = useState<TicketCategory>(ticket.category);
 
-  const error = update.error instanceof ApiError ? update.error.message : null;
+  const error = inlineErrorMessage(update.error);
+
+  function save(input: UpdateTicketInput) {
+    update.mutate(input, {
+      onSuccess: onDone,
+      // Um 409 de versão abre o diálogo; qualquer outro erro fica no alerta
+      // inline. `save` se chama pela própria referência ao reaplicar, e sai com
+      // a versão nova sozinho — ela vem do cache, que o `capture` recarregou.
+      onError: (mutationError) => {
+        onConflict(mutationError, {
+          describe: (current) => [
+            { label: "Title", current: current.title, attempted: input.title ?? "" },
+            {
+              label: "Description",
+              current: current.description ?? "",
+              attempted: input.description ?? "",
+            },
+            {
+              label: "Priority",
+              current: priorityLabel(current.priority),
+              attempted: priorityLabel(input.priority ?? current.priority),
+            },
+            {
+              label: "Category",
+              current: categoryLabel(current.category),
+              attempted: categoryLabel(input.category ?? current.category),
+            },
+          ],
+          reapply: () => {
+            save(input);
+          },
+        });
+      },
+    });
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    update.mutate(
-      // A `version` não vem daqui: o hook a lê do cache. Um campo de formulário
-      // envelheceria em silêncio depois de um conflito resolvido.
-      { title: title.trim(), description, priority, category },
-      { onSuccess: onDone },
-    );
+    // A `version` não vem daqui: o hook a lê do cache. Um campo de formulário
+    // envelheceria em silêncio depois de um conflito resolvido.
+    save({ title: title.trim(), description, priority, category });
   }
 
   return (

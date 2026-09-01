@@ -6,6 +6,8 @@
  * discordarem sobre o formato.
  */
 
+import { ApiError } from "@/lib/api/errors";
+
 const VERSION_CONFLICT = /it is now at version (\d+)\)/;
 
 /**
@@ -23,4 +25,24 @@ export function parseVersionConflict(message: string): number | null {
   const matched = VERSION_CONFLICT.exec(message);
 
   return matched ? Number(matched[1]) : null;
+}
+
+/**
+ * A mensagem que vai para o alerta inline de uma ação.
+ *
+ * `null` quando é conflito de versão: esse tem diálogo próprio, e mostrar os
+ * dois ao mesmo tempo diria duas coisas diferentes sobre um erro só — o alerta
+ * pedindo para tentar de novo, o diálogo explicando por que tentar de novo não
+ * é o caminho.
+ */
+export function inlineErrorMessage(error: unknown): string | null {
+  if (!(error instanceof ApiError)) {
+    return null;
+  }
+
+  if (error.status === 409 && parseVersionConflict(error.message) !== null) {
+    return null;
+  }
+
+  return error.message;
 }

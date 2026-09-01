@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/features/identity/queries/session";
 import { ApiError } from "@/lib/api/errors";
 
+import { useVersionConflict } from "../queries/conflict";
 import { useTicketHistory } from "../queries/history";
 import { useTicket } from "../queries/tickets";
 import { CommentComposer } from "./comment-composer";
@@ -14,6 +15,7 @@ import { TicketActions } from "./ticket-actions";
 import { TicketDetailsCard } from "./ticket-details-card";
 import { TicketHeader } from "./ticket-header";
 import { TicketHistoryFeed } from "./ticket-history";
+import { VersionConflictDialog } from "./version-conflict-dialog";
 
 /**
  * `/tickets/:id`.
@@ -30,6 +32,10 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
 
   const ticket = useTicket(ticketId);
   const history = useTicketHistory(ticketId);
+
+  // Um diálogo só para as três mutações: as três disputam a mesma `version`, e
+  // dois conflitos simultâneos não são um caso — a pessoa só clica uma vez.
+  const { conflict, capture, dismiss } = useVersionConflict(ticketId);
 
   if (ticket.error instanceof ApiError && ticket.error.status === 404) {
     return (
@@ -76,7 +82,7 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
         <div className="grid gap-6">
-          <TicketDetailsCard ticket={ticket.data} />
+          <TicketDetailsCard ticket={ticket.data} onConflict={capture} />
 
           <section className="grid gap-4">
             <h2 className="text-sm font-medium">History</h2>
@@ -92,8 +98,16 @@ export function TicketPage({ ticketId }: { ticketId: string }) {
 
         {/* As duas ações de staff. Some inteiro para um REQUESTER: as rotas
             respondem 403 para ele. */}
-        {isStaff ? <TicketActions ticket={ticket.data} /> : null}
+        {isStaff ? (
+          <TicketActions ticket={ticket.data} onConflict={capture} />
+        ) : null}
       </div>
+
+      <VersionConflictDialog
+        conflict={conflict}
+        ticket={ticket.data}
+        onDismiss={dismiss}
+      />
     </div>
   );
 }

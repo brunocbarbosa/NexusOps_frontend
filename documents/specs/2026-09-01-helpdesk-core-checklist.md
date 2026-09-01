@@ -37,7 +37,7 @@ npm run typecheck
 - [x] **7 · Tela `/tickets/:id`** — header, detalhes editáveis, ações do agente (status e assignee),
       compositor de comentário com o switch de nota interna, feed da timeline. 404 renderiza
       "Ticket not found", não um alerta.
-- [ ] **8 · O 409** — `version-conflict-dialog` e a integração nos três PATCH. Teste do ciclo
+- [x] **8 · O 409** — `version-conflict-dialog` e a integração nos três PATCH. Teste do ciclo
       completo: conflito → recarregar → reaplicar → versão avança um. Os outros três 409 caem em
       alerta inline.
 - [ ] **9 · Navegação** — item **Tickets** no `NAV` de `app-shell.tsx` (ADMIN, AGENT, REQUESTER) e

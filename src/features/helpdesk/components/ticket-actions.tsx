@@ -8,8 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ApiError } from "@/lib/api/errors";
-
+import { inlineErrorMessage } from "../api-messages";
+import { statusLabel } from "../format";
+import type { CaptureConflict } from "../queries/conflict";
 import { useStaff } from "../queries/staff";
 import { useAssign, useChangeStatus } from "../queries/tickets";
 import { nextStatuses, type Ticket, type TicketStatus } from "../types";
@@ -23,12 +24,62 @@ const UNASSIGNED_OPTION = "none";
  * para ele. Esconder o que sempre falharia é o padrão das outras telas; a
  * autoridade continua sendo o backend.
  */
-export function TicketActions({ ticket }: { ticket: Ticket }) {
+export function TicketActions({
+  ticket,
+  onConflict,
+}: {
+  ticket: Ticket;
+  onConflict: CaptureConflict;
+}) {
   const changeStatus = useChangeStatus(ticket.id);
   const assign = useAssign(ticket.id);
   const staff = useStaff(true);
 
   const transitions = nextStatuses(ticket.status);
+
+  function moveTo(status: TicketStatus) {
+    changeStatus.mutate(status, {
+      onError: (error) => {
+        onConflict(error, {
+          describe: (current) => [
+            {
+              label: "Status",
+              current: statusLabel(current.status),
+              attempted: statusLabel(status),
+            },
+          ],
+          reapply: () => {
+            moveTo(status);
+          },
+        });
+      },
+    });
+  }
+
+  function assignTo(assigneeId: string | null) {
+    assign.mutate(assigneeId, {
+      onError: (error) => {
+        onConflict(error, {
+          describe: (current) => [
+            {
+              label: "Assignee",
+              current: current.assignee?.email ?? "Unassigned",
+              attempted: emailOf(assigneeId) ?? "Unassigned",
+            },
+          ],
+          reapply: () => {
+            assignTo(assigneeId);
+          },
+        });
+      },
+    });
+  }
+
+  function emailOf(id: string | null): string | null {
+    return id === null
+      ? null
+      : ((staff.data ?? []).find((person) => person.id === id)?.email ?? id);
+  }
 
   return (
     <div className="grid gap-4 rounded-lg border p-4">
@@ -49,7 +100,7 @@ export function TicketActions({ ticket }: { ticket: Ticket }) {
                 size="sm"
                 disabled={changeStatus.isPending}
                 onClick={() => {
-                  changeStatus.mutate(status);
+                  moveTo(status);
                 }}
               >
                 {actionLabel(ticket.status, status)}
@@ -68,7 +119,7 @@ export function TicketActions({ ticket }: { ticket: Ticket }) {
           onValueChange={(value) => {
             // `null` é o valor que **remove** o responsável, e não a ausência
             // do campo — a rota distingue os dois.
-            assign.mutate(value === UNASSIGNED_OPTION ? null : value);
+            assignTo(value === UNASSIGNED_OPTION ? null : value);
           }}
         >
           <SelectTrigger aria-label="Assignee">
@@ -97,16 +148,19 @@ export function TicketActions({ ticket }: { ticket: Ticket }) {
  * O 409 de transição ilegal e o de "um REQUESTER não pode receber chamado"
  * chegam aqui: são 409 e **não** são conflito de versão, então recarregar não
  * ajudaria e abrir o diálogo de conflito mandaria a pessoa reaplicar algo que o
- * servidor vai recusar de novo.
+ * servidor vai recusar de novo. `inlineErrorMessage` é quem os separa — o
+ * conflito de versão sai daqui e vai para o diálogo.
  */
 function ActionError({ error }: { error: Error | null }) {
-  if (!(error instanceof ApiError)) {
+  const message = inlineErrorMessage(error);
+
+  if (message === null) {
     return null;
   }
 
   return (
     <p role="alert" className="text-destructive text-sm">
-      {error.message}
+      {message}
     </p>
   );
 }
