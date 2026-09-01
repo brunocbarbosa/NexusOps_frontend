@@ -18,7 +18,7 @@ npm run typecheck
 - [x] **0 · Spec e checklist** — `documents/specs/2026-09-01-helpdesk-core-design.md` e este arquivo.
 - [x] **1 · `PageMeta` para `src/lib/api/page.ts`** — mover de `features/identity/types.ts` e
       atualizar identity e platform. Critério: `npm test` passa **sem editar nenhum teste**.
-- [ ] **2 · Tipos, formato e mensagens** — `features/helpdesk/types.ts` (status, priority, category,
+- [x] **2 · Tipos, formato e mensagens** — `features/helpdesk/types.ts` (status, priority, category,
       `Ticket`, `Comment`, `AuditEntry`, `HistoryEntry`, `TicketsQuery`, mapa de transições legais),
       `format.ts` (rótulos e a frase de cada `AuditAction`) e `api-messages.ts`
       (`parseVersionConflict`). Testes primeiro para o mapa de transições e o parser.
