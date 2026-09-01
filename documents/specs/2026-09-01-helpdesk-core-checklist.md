@@ -46,7 +46,7 @@ npm run typecheck
 - [x] **10 · Dublê e E2E** — `e2e/support/fake-api.mjs` com tickets, comentários e timeline,
       **incluindo** o 409 de versão com a versão atual na mensagem e a visibilidade por papel.
       `e2e/helpdesk.spec.ts` cobrindo a cadeia da §7 da spec.
-- [ ] **11 · Documentação** — `CLAUDE.md` (estado do repositório, tabela de referência, próximo
+- [x] **11 · Documentação** — `CLAUDE.md` (estado do repositório, tabela de referência, próximo
       passo) e a seção de helpdesk em `documents/TESTE_MANUAL.md`.
 
 ## Verificação final da fatia
@@ -54,11 +54,11 @@ npm run typecheck
 Nesta ordem — `npm run e2e` **não constrói nada**, então sem o `build` ele testa o artefato da última
 build e passa verde por engano:
 
-- [ ] `npm test`
-- [ ] `npm run lint`
-- [ ] `npm run typecheck`
-- [ ] `npm run build`
-- [ ] `npm run e2e`
+- [x] `npm test`
+- [x] `npm run lint`
+- [x] `npm run typecheck`
+- [x] `npm run build`
+- [x] `npm run e2e`
 
 ## Verificação manual, contra a API real
 

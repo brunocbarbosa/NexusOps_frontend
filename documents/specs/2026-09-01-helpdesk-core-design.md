@@ -1,6 +1,6 @@
 # Fatia `helpdesk` — o núcleo: chamados, thread e o 409
 
-**Data:** 2026-09-01 · **Estado:** em implementação · **Precede:**
+**Data:** 2026-09-01 · **Estado:** implementada · **Precede:**
 [`2026-08-25-platform-operator-console-design.md`](./2026-08-25-platform-operator-console-design.md)
 
 A interface é escrita em **inglês**; a documentação continua em português.
