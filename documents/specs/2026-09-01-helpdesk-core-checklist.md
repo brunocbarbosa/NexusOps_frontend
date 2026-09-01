@@ -29,7 +29,7 @@ npm run typecheck
 - [x] **4 · `/api/tickets/:id/history`** — a função de merge testada isolada (comentário sem entrada
       de auditoria, `commented` virando uma entrada só, ordem por `createdAt`, teto de páginas), e
       então o handler.
-- [ ] **5 · Hooks** — `queries/keys.ts`, `queries/tickets.ts` (`useTickets` infinita, `useTicket`,
+- [x] **5 · Hooks** — `queries/keys.ts`, `queries/tickets.ts` (`useTickets` infinita, `useTicket`,
       `useCreateTicket`, `useUpdateTicket`, `useChangeStatus`, `useAssign`), `queries/history.ts`,
       `queries/staff.ts`. Sem optimistic update; sucesso grava com `setQueryData`.
 - [ ] **6 · Tela `/tickets`** — toolbar com filtros e busca (debounce 300 ms), lista virtualizada com
