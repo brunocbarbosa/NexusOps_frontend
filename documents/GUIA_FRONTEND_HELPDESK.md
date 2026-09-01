@@ -1,13 +1,13 @@
 # Guia de frontend — helpdesk
 
-O **contrato** da API é a Parte I de [`important/HELPDESK.md`](../important/HELPDESK.md): lá estão
+O **contrato** da API é a Parte I de [`backend/HELPDESK.md`](./backend/HELPDESK.md): lá estão
 todos os endpoints, os payloads capturados da aplicação rodando e o catálogo de erros. Este guia não
 repete nada disso.
 
 O que ele trata é o que o cliente Next.js precisa **decidir** por causa do desenho do backend — as
 quatro ou cinco coisas que, se forem descobertas durante a implementação, custam retrabalho de tela.
 
-O stack alvo está no [`MAIN.md`](../MAIN.md): Next.js, TanStack Query, TanStack Table,
+O stack alvo está no [`MAIN.md`](./MAIN.md): Next.js, TanStack Query, TanStack Table,
 `@tanstack/react-virtual`, Tailwind com Radix ou shadcn/ui.
 
 ---
@@ -183,7 +183,7 @@ devolve um par novo e invalida o antigo. Reusar um refresh token já usado revog
 então **um único ponto no cliente pode chamar o refresh**, com as requisições concorrentes esperando
 a mesma promise. Dois refreshes em paralelo derrubam a sessão.
 
-O detalhe completo está na Parte I de [`important/USERS.md`](../important/USERS.md).
+O detalhe completo está na Parte I de [`backend/USERS.md`](./backend/USERS.md).
 
 ## 9. Telas mínimas
 
