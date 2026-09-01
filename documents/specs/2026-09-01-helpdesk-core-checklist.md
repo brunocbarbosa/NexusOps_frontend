@@ -26,7 +26,7 @@ npm run typecheck
       `/status`, `/assignee`, `/comments` (POST). Cada um com `route.test.ts`
       (`@jest-environment node`). Cobrir: `unassigned` × `assigneeId` nunca juntos, allowlist do
       corpo, `perPage` limitado a 100.
-- [ ] **4 · `/api/tickets/:id/history`** — a função de merge testada isolada (comentário sem entrada
+- [x] **4 · `/api/tickets/:id/history`** — a função de merge testada isolada (comentário sem entrada
       de auditoria, `commented` virando uma entrada só, ordem por `createdAt`, teto de páginas), e
       então o handler.
 - [ ] **5 · Hooks** — `queries/keys.ts`, `queries/tickets.ts` (`useTickets` infinita, `useTicket`,
