@@ -43,7 +43,7 @@ npm run typecheck
 - [x] **9 · Navegação** — item **Tickets** no `NAV` de `app-shell.tsx` (ADMIN, AGENT, REQUESTER) e
       `COMPANY_HOME` de `next-path.ts` passando de `/users` para `/tickets`. Atualizar
       `next-path.test.ts` e `app-shell.test.tsx`.
-- [ ] **10 · Dublê e E2E** — `e2e/support/fake-api.mjs` com tickets, comentários e timeline,
+- [x] **10 · Dublê e E2E** — `e2e/support/fake-api.mjs` com tickets, comentários e timeline,
       **incluindo** o 409 de versão com a versão atual na mensagem e a visibilidade por papel.
       `e2e/helpdesk.spec.ts` cobrindo a cadeia da §7 da spec.
 - [ ] **11 · Documentação** — `CLAUDE.md` (estado do repositório, tabela de referência, próximo
