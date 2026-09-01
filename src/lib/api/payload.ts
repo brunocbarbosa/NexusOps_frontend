@@ -54,6 +54,37 @@ export function pickBooleans<K extends string>(
 }
 
 /**
+ * O irmão numérico, para a `version` do controle de concorrência otimista.
+ *
+ * `pickStrings` a descartaria em silêncio e o `PATCH` sairia sem ela — que o
+ * backend recusa com um 400 de validação ("version must be an integer number"),
+ * uma mensagem sem sentido para quem só editou um título.
+ *
+ * Só inteiro **positivo** passa: `version` começa em 1, e `"3"` vindo de um
+ * `<input>` é bug do chamador, não um número.
+ */
+export function pickPositiveIntegers<K extends string>(
+  payload: unknown,
+  keys: readonly K[],
+): Partial<Record<K, number>> {
+  if (typeof payload !== "object" || payload === null) {
+    return {};
+  }
+
+  const source = payload as Record<string, unknown>;
+  const picked: Partial<Record<K, number>> = {};
+
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+      picked[key] = value;
+    }
+  }
+
+  return picked;
+}
+
+/**
  * Desce um nível no corpo recebido.
  *
  * `POST /platform/companies` leva o primeiro ADMIN aninhado em `admin`, e

@@ -22,7 +22,7 @@ npm run typecheck
       `Ticket`, `Comment`, `AuditEntry`, `HistoryEntry`, `TicketsQuery`, mapa de transições legais),
       `format.ts` (rótulos e a frase de cada `AuditAction`) e `api-messages.ts`
       (`parseVersionConflict`). Testes primeiro para o mapa de transições e o parser.
-- [ ] **3 · Route Handlers de ticket** — `/api/tickets` (GET, POST), `/api/tickets/:id` (GET, PATCH),
+- [x] **3 · Route Handlers de ticket** — `/api/tickets` (GET, POST), `/api/tickets/:id` (GET, PATCH),
       `/status`, `/assignee`, `/comments` (POST). Cada um com `route.test.ts`
       (`@jest-environment node`). Cobrir: `unassigned` × `assigneeId` nunca juntos, allowlist do
       corpo, `perPage` limitado a 100.
