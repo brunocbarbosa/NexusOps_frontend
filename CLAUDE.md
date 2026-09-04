@@ -133,6 +133,17 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
   dublês de `Element.prototype` são **guardados por `typeof Element !== "undefined"`**: testes de
   Route Handler declaram `@jest-environment node`, onde `Element` não existe. Testes de componente
   usam os dublês de `src/test/http.ts` para a Fetch API.
+- **O `jest-environment-jsdom` está segurado em 30.4.1, e não é capricho.** A 30.5.0 deixa a suíte
+  **7x mais lenta** — 28,6 s para 199,4 s no mesmo runner da CI — e estoura o timeout de 5 s nos três
+  testes de `companies-page.test.tsx` que digitam com `userEvent`. Isolado num worktree limpo, com
+  `npm ci` entre cada rodada: `env 30.4.1 → 11 passed, 2,2 s`; `env 30.5.0 → 3 failed, 81,9 s`. Não é
+  o jsdom (a lib é 26.1.0 nas duas), não é o `jest` nem o `@testing-library/react` — a suíte inteira
+  passa em 7,2 s com jest 30.5.1 e RTL 16.3.3 desde que o env fique atrás. O changelog do 30.5.0 não
+  menciona o environment. O `ignore` mora no `.github/dependabot.yml`, com os números. **Não suba o
+  timeout dos três testes**: é a saída que faz o vermelho sumir e a lentidão ficar.
+  Um aviso de método: bissetar isso com `npm i` sucessivos **mente**. O npm não rebaixa os internos
+  `@jest/*` já içados, então o controle de volta na 30.4.1 continua falhando e qualquer conclusão sai
+  invertida. Restaure `package.json` e `package-lock.json` e rode `npm ci` a cada passo.
 
 ## Estado do repositório
 
