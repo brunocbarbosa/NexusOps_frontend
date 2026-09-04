@@ -119,12 +119,39 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
   do dublê de `fetch` falha na hora em vez de acertar algo vivo em `localhost`.
 - **O TanStack Table 9 é ESM puro.** Ele está em `transpilePackages` no `next.config.ts`; sem isso
   todo teste que renderize a grid morre com `Cannot use import statement outside a module`.
+- **O jsdom também não tem motor de layout, e é isso que quebra a lista virtualizada nos testes.**
+  Todo elemento mede 0, então o `@tanstack/react-virtual` conclui que a janela de scroll tem altura
+  zero e renderiza **nenhuma** linha — a falha aparece como "o dado não chegou", quando o que faltou
+  foi a régua. `giveJsdomLayout()` (`src/test/layout.ts`) resolve, e precisa ser chamado no
+  `beforeEach` de qualquer suíte que renderize a lista. Dois becos já percorridos: **`initialRect`
+  no virtualizador não adianta** (o `observeElementRect` dele sobrescreve a medida inicial com zero
+  na montagem) e **não é `getBoundingClientRect`** — o `getRect` do `virtual-core` lê
+  `offsetWidth`/`offsetHeight`, então um dublê do rect não é consultado.
 - **O jsdom não tem `TextEncoder`, a Fetch API, Pointer Events nem `scrollIntoView`.** O
   `src/test/setup.ts` preenche o primeiro e os dois últimos — sem eles o Radix não abre `Select` nem
   `DropdownMenu`, e `userEvent.click` morre com `target.hasPointerCapture is not a function`. Os
   dublês de `Element.prototype` são **guardados por `typeof Element !== "undefined"`**: testes de
   Route Handler declaram `@jest-environment node`, onde `Element` não existe. Testes de componente
   usam os dublês de `src/test/http.ts` para a Fetch API.
+- **O `jest-environment-jsdom` está segurado em 30.4.1, e não é capricho.** A 30.5.0 deixa a suíte
+  **7x mais lenta** — 28,6 s para 199,4 s no mesmo runner da CI — e estoura o timeout de 5 s nos três
+  testes de `companies-page.test.tsx` que digitam com `userEvent`. Isolado num worktree limpo, com
+  `npm ci` entre cada rodada: `env 30.4.1 → 11 passed, 2,2 s`; `env 30.5.0 → 3 failed, 81,9 s`. Não é
+  o jsdom (a lib é 26.1.0 nas duas), não é o `jest` nem o `@testing-library/react` — a suíte inteira
+  passa em 7,2 s com jest 30.5.1 e RTL 16.3.3 desde que o env fique atrás. O changelog do 30.5.0 não
+  menciona o environment. O `ignore` mora no `.github/dependabot.yml`, com os números — mas **só passa a valer depois
+  que chegar à `main`** (ver o item seguinte). **Não suba o
+  timeout dos três testes**: é a saída que faz o vermelho sumir e a lentidão ficar.
+  Um aviso de método: bissetar isso com `npm i` sucessivos **mente**. O npm não rebaixa os internos
+  `@jest/*` já içados, então o controle de volta na 30.4.1 continua falhando e qualquer conclusão sai
+  invertida. Restaure `package.json` e `package-lock.json` e rode `npm ci` a cada passo.
+- **O Dependabot lê o `.github/dependabot.yml` da branch *default*, que aqui é a `main` — não da
+  `development`.** Mudança de config só entra em vigor no release seguinte. Medido: com o `ignore` do
+  `jest-environment-jsdom` já mergeado na `development`, dois `@dependabot recreate` seguidos no #31
+  recriaram o PR **com** o pacote ignorado; a `main` tinha zero ocorrência do nome e a `development`,
+  duas. É a mesma mecânica que faz o `target-branch: development` funcionar: ele está na `main`. A
+  consequência prática é que um PR do bot travado por config nova continua travado até o release —
+  não adianta insistir no `recreate`.
 
 ## Estado do repositório
 
@@ -136,10 +163,15 @@ Pipeline pronta e exercitada num PR real: GitHub Actions em três workflows (`CI
 `Release`), SonarCloud com Quality Gate que reprova o job, CodeQL, Dependency Review, `npm audit`,
 gitleaks e Dependabot. Os rulesets das duas branches estão aplicados e recusam push direto.
 
-**O `Release` ainda não rodou.** Ele dispara no push de `main`, e nenhum merge `development → main`
-aconteceu até agora — a imagem foi construída e validada localmente (67 MB, uid 1001, `/api/health`
-respondendo, CSS servido com 200), mas nunca publicada no GHCR. O primeiro merge de release é o que
-prova essa metade.
+**O `Release` já rodou, três vezes.** Ele dispara no push de `main`, e cada release de fecho de PR o
+acionou: #10 em 2026-08-23, #16 em 2026-08-25 e #20 em 2026-08-28, todos com sucesso. Publica
+`ghcr.io/brunocbarbosa/nexusops_frontend` — nome derivado do repositório, então com **underscore**,
+não hífen — nas tags `sha-<commit>`, `main` e `latest`, mais um atestado de proveniência de build.
+
+Até 2026-08-28 este parágrafo afirmava o contrário ("ainda não rodou", "nenhum merge
+`development → main` aconteceu"), o que já era falso desde o primeiro release. Vale como aviso: o
+estado descrito aqui envelhece, e `gh run list --workflow=Release` responde em um segundo o que uma
+frase desatualizada faz um agente supor por uma sessão inteira.
 
 **A fatia `identity` está implementada**: login, sessão em cookie `httpOnly`, refresh serializado,
 listagem e administração de usuários, e troca da própria senha. O desenho está em
@@ -175,8 +207,38 @@ Duas regras que caíram daí e valem para as próximas telas:
 - **`src/lib/api/server.ts` é o único lugar que fala com o NestJS autenticado.** Handler que monta a
   requisição por conta própria pode esquecer o `Bearer`, renovar duas vezes ou vazar o token.
 
-**Ainda não existe**: helpdesk (chamados), ativos e auditoria — nenhuma tela, nenhum Route Handler.
-E **não há CSP**; os cabeçalhos de segurança simples estão em `src/lib/security-headers.ts`.
+**A fatia `helpdesk` está implementada no núcleo**: `/tickets` (lista virtualizada com scroll
+infinito), abrir chamado, `/tickets/:id` com a thread e a timeline intercaladas, as ações do agente
+(status e assignee) e o diálogo de conflito de versão. Desenho em
+[`documents/specs/2026-09-01-helpdesk-core-design.md`](./documents/specs/2026-09-01-helpdesk-core-design.md).
+
+Quatro regras que caíram daí:
+
+- **Nem todo 409 é conflito de versão.** O mesmo status cobre a transição ilegal, o assignee que é
+  `REQUESTER` e o chamado fechado recusando comentário — e nenhum desses se resolve recarregando.
+  `parseVersionConflict()` separa: número é conflito e abre o diálogo, `null` é outro 409 e vai para
+  o alerta inline. `inlineErrorMessage()` é o que impede os dois de aparecerem juntos dizendo coisas
+  diferentes sobre um erro só.
+- **A `version` de todo `PATCH` vem do cache do TanStack Query**, nunca de um `useState` do
+  formulário. É isso que faz "reaplicar" funcionar sem ninguém digitar versão nenhuma — e um estado
+  paralelo envelheceria em silêncio, reenviando a versão velha depois de um conflito resolvido.
+- **A timeline é juntada no servidor**, em `/api/tickets/:id/history`: o backend mantém `/timeline`
+  (as mudanças) e `/comments` (os textos) separados, e ordenar globalmente por `createdAt` pede as
+  duas listas inteiras. No browser seriam duas `useInfiniteQuery` avançando em passo. A linha
+  juntada é datada pelo **comentário**, não pela entrada — a trilha é escrita depois da resposta.
+- **404 de chamado é a regra de visibilidade, não um erro.** A tela renderiza "Ticket not found" com
+  volta para a lista, e nenhum `role="alert"`. A mesma URL responde 200 para um agente.
+
+`landingPath` manda todo não-operador para **`/tickets`**, e não mais para `/users`: listar usuários
+exige ADMIN ou AGENT, então um `REQUESTER` caía num 403 na primeira tela que via.
+
+**Ainda não existe**: relatórios assíncronos, o socket, o feed `/audit` e a fatia de ativos. E
+**não há CSP**; os cabeçalhos de segurança simples estão em `src/lib/security-headers.ts`.
+
+O transporte do realtime **já está decidido** (§5 da spec do helpdesk) e não deve ser rediscutido:
+`socket.io` exige o token em `auth`, e o access token vive num cookie `httpOnly` — a saída é um
+Route Handler `GET /api/realtime` que responde `text/event-stream` e mantém o `socket.io-client`
+do lado do servidor.
 
 **`POST /auth/register` foi removido do backend** — responde 404, inclusive com token válido. Não
 há e não deve haver tela de cadastro: companies nascem no console do operador, e o operador nasce
@@ -218,6 +280,8 @@ O design que originou este scaffold está em
 | [`documents/MAIN_FRONTEND.md`](./documents/MAIN_FRONTEND.md)              | qualquer decisão de stack ou estrutura de pastas                  |
 | [`documents/TESTE_MANUAL.md`](./documents/TESTE_MANUAL.md)                | testar as telas na mão: contas do tenant de dev e o que observar  |
 | [`documents/backend/PLATFORM.md`](./documents/backend/PLATFORM.md)        | mexer no console do operador, em companies ou no papel `ADMIN_MASTER` |
+| [`documents/backend/HELPDESK.md`](./documents/backend/HELPDESK.md)        | mexer em chamados, comentários, trilha, relatórios ou socket       |
+| [`documents/GUIA_FRONTEND_HELPDESK.md`](./documents/GUIA_FRONTEND_HELPDESK.md) | as decisões que o desenho do helpdesk obriga o cliente a tomar |
 | [`documents/specs/2026-08-22-cicd-security-design.md`](./documents/specs/2026-08-22-cicd-security-design.md) | mexer em workflow, Dockerfile ou política de branches |
 | [`documents/backend/USERS.md`](./documents/backend/USERS.md)              | implementar login, refresh, senhas ou telas de usuários           |
 | [`documents/backend/TENANCY_EXTENSION.md`](./documents/backend/TENANCY_EXTENSION.md) | entender por que a API responde 404 e não 403          |
@@ -299,12 +363,19 @@ Pontos que mudam o desenho das telas — o *porquê* de cada um está em `docume
 
 ## Próximo passo
 
-A fatia de helpdesk: listagem de chamados (virtualizada, esta sim), abertura, e o **409 de conflito
-de versão** — a primeira tela em que o controle otimista do backend aparece na UI.
+A **fatia 2 do helpdesk**, a assíncrona: `POST /reports/tickets` (202) → notificação → download do
+CSV, o socket por SSE (§5 da spec do núcleo, já decidido), e o feed `/audit` do ADMIN — este sim
+virtualizado, como a listagem de chamados.
+
+Duas coisas que essa fatia vai encontrar e que já estão mapeadas: o download precisa de um handler
+próprio, porque `proxyToApi` força `content-type: application/json` e o CSV chega como `text/csv`
+com `Content-Disposition`; e um `<a href>` simples não serve, porque a chamada leva `Authorization`
+— tem de ser `fetch` → `Blob`.
 
 Antes ou junto: **CSP com nonce**, que ficou de fora da fatia de login de propósito. O nonce é gerado
 no `proxy.ts` e exige renderização dinâmica em toda página — ver
-`node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`.
+`node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`. Vale fazê-la **antes** do
+socket: é ela que muda o cálculo de risco de qualquer token que chegue ao browser.
 
 > **`middleware.ts` não existe mais.** O Next 16 depreciou o arquivo e o renomeou para `proxy.ts`
 > (na raiz de `src/`). A porta de rotas e os cabeçalhos de segurança moram lá.

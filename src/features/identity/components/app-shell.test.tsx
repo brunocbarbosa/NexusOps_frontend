@@ -39,6 +39,36 @@ describe("AppShell", () => {
     expect(screen.getByText("content")).toBeInTheDocument();
   });
 
+  it.each(["ADMIN", "AGENT", "REQUESTER"] as const)(
+    "mostra Tickets para %s — os três papéis de company têm chamados",
+    async (role) => {
+      signedInAs(role);
+      renderWithQuery(
+        <AppShell>
+          <p>content</p>
+        </AppShell>,
+      );
+
+      expect(
+        await screen.findAllByRole("link", { name: "Tickets" }),
+      ).not.toHaveLength(0);
+    },
+  );
+
+  it("esconde Tickets do operador, que não tem chamados", async () => {
+    // Ele não pertence a company nenhuma: a tabela de visibilidade do backend
+    // diz "nothing" para ADMIN_MASTER.
+    signedInAs("ADMIN_MASTER");
+    renderWithQuery(
+      <AppShell>
+        <p>content</p>
+      </AppShell>,
+    );
+
+    await screen.findAllByRole("link", { name: "Companies" });
+    expect(screen.queryByRole("link", { name: "Tickets" })).not.toBeInTheDocument();
+  });
+
   it("esconde Users do REQUESTER, que receberia 403 na rota", async () => {
     signedInAs("REQUESTER");
     renderWithQuery(

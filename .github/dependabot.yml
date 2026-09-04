@@ -51,6 +51,27 @@ updates:
       # ele, na mão.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # O jest-environment-jsdom 30.5.0 tornou a suíte 7x mais lenta e estourou
+      # o timeout de 5s em três testes de `companies-page.test.tsx` — os que
+      # digitam com `userEvent`. Medido, com o resto da árvore igual:
+      #
+      #   env 30.4.1  ->  11 passed,  2,2 s
+      #   env 30.5.0  ->   3 failed, 81,9 s
+      #
+      # Não é o jsdom: a lib por baixo é a 26.1.0 nas duas. Não é o jest nem o
+      # @testing-library/react: a suíte inteira passa em 7,2 s com jest 30.5.1
+      # e RTL 16.3.3, desde que o env fique em 30.4.1. E o changelog do 30.5.0
+      # não traz nenhuma entrada tocando o environment — a medição acima é a
+      # única evidência que existe.
+      #
+      # Fica de fora até alguém entender o que mudou. A saída fácil seria subir
+      # o timeout dos três testes, e é a errada: trocaria um vermelho honesto
+      # por um verde escondendo a suíte 7x mais lenta.
+      # Atenção: o Dependabot lê este arquivo da branch **default** (`main`), não da
+      # `development`. Esta regra só passa a valer no release seguinte — até lá o #31
+      # continua reprovando, e `@dependabot recreate` não muda isso.
+      - dependency-name: jest-environment-jsdom
+        versions: [">=30.5.0"]
 
   - package-ecosystem: github-actions
     directory: "/"

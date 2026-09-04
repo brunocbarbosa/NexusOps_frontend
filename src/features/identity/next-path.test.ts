@@ -23,9 +23,11 @@ describe("landingPath", () => {
   });
 
   it.each(["ADMIN", "AGENT", "REQUESTER"] as const)(
-    "manda %s para o console da empresa",
+    "manda %s para os chamados, que é a casa dos três",
     (role) => {
-      expect(landingPath(role, null)).toBe("/users");
+      // `/users` exigiria ADMIN ou AGENT: um REQUESTER mandado para lá caía num
+      // 403 na primeira tela que via.
+      expect(landingPath(role, null)).toBe("/tickets");
     },
   );
 
@@ -39,7 +41,7 @@ describe("landingPath", () => {
   it("ignora um destino do outro console em vez de entregar um 403", () => {
     // `/platform/companies` protegido manda para `/login?next=/platform/companies`.
     // O porteiro não sabia quem viria entrar; quem sabe é isto aqui.
-    expect(landingPath("ADMIN", "/platform/companies")).toBe("/users");
+    expect(landingPath("ADMIN", "/platform/companies")).toBe("/tickets");
     expect(landingPath("ADMIN_MASTER", "/users")).toBe("/platform/companies");
   });
 
@@ -48,7 +50,7 @@ describe("landingPath", () => {
   });
 
   it("recusa destino externo antes de olhar o papel", () => {
-    expect(landingPath("ADMIN", "//exemplo.invalido")).toBe("/users");
+    expect(landingPath("ADMIN", "//exemplo.invalido")).toBe("/tickets");
     expect(landingPath("ADMIN_MASTER", "https://exemplo.invalido")).toBe(
       "/platform/companies",
     );
