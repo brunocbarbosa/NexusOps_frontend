@@ -152,6 +152,16 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
   duas. É a mesma mecânica que faz o `target-branch: development` funcionar: ele está na `main`. A
   consequência prática é que um PR do bot travado por config nova continua travado até o release —
   não adianta insistir no `recreate`.
+- **O Dockerfile só é exercitado no `Release`, isto é, depois da `main`.** Nenhum job de CI constrói
+  a imagem, então `lint`, `typecheck`, `test` e `e2e` verdes **não** dizem que a imagem constrói. O
+  `.dockerignore` deixa de fora a ferramentaria (`commitlint.config.*`, `jest.config.ts`,
+  `playwright.config.ts`, `e2e/`), mas o `COPY . .` leva todo o resto — e o `next build` dentro da
+  imagem tipa o que encontrar. Um `.ts` na raiz que importe um arquivo ignorado quebra o build com
+  `TS2307: Cannot find module`, e a falha só aparece no `Release`, com o merge já na `main`.
+  Aconteceu no #34: `commitlint.config.test.ts` entrou na imagem sem a config que ele importa. Ao
+  criar arquivo de teste na raiz, ou o `.dockerignore` cobre os dois, ou o teste mora em `src/`.
+  Para conferir antes: `docker build -t nexusops-frontend .` — é o único lugar onde esse erro
+  aparece.
 
 ## Estado do repositório
 
