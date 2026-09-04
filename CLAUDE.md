@@ -139,11 +139,19 @@ essa pasta antes de escrever código de Next, em vez de confiar na memória.
   `npm ci` entre cada rodada: `env 30.4.1 → 11 passed, 2,2 s`; `env 30.5.0 → 3 failed, 81,9 s`. Não é
   o jsdom (a lib é 26.1.0 nas duas), não é o `jest` nem o `@testing-library/react` — a suíte inteira
   passa em 7,2 s com jest 30.5.1 e RTL 16.3.3 desde que o env fique atrás. O changelog do 30.5.0 não
-  menciona o environment. O `ignore` mora no `.github/dependabot.yml`, com os números. **Não suba o
+  menciona o environment. O `ignore` mora no `.github/dependabot.yml`, com os números — mas **só passa a valer depois
+  que chegar à `main`** (ver o item seguinte). **Não suba o
   timeout dos três testes**: é a saída que faz o vermelho sumir e a lentidão ficar.
   Um aviso de método: bissetar isso com `npm i` sucessivos **mente**. O npm não rebaixa os internos
   `@jest/*` já içados, então o controle de volta na 30.4.1 continua falhando e qualquer conclusão sai
   invertida. Restaure `package.json` e `package-lock.json` e rode `npm ci` a cada passo.
+- **O Dependabot lê o `.github/dependabot.yml` da branch *default*, que aqui é a `main` — não da
+  `development`.** Mudança de config só entra em vigor no release seguinte. Medido: com o `ignore` do
+  `jest-environment-jsdom` já mergeado na `development`, dois `@dependabot recreate` seguidos no #31
+  recriaram o PR **com** o pacote ignorado; a `main` tinha zero ocorrência do nome e a `development`,
+  duas. É a mesma mecânica que faz o `target-branch: development` funcionar: ele está na `main`. A
+  consequência prática é que um PR do bot travado por config nova continua travado até o release —
+  não adianta insistir no `recreate`.
 
 ## Estado do repositório
 
