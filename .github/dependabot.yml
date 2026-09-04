@@ -67,6 +67,9 @@ updates:
       # Fica de fora até alguém entender o que mudou. A saída fácil seria subir
       # o timeout dos três testes, e é a errada: trocaria um vermelho honesto
       # por um verde escondendo a suíte 7x mais lenta.
+      # Atenção: o Dependabot lê este arquivo da branch **default** (`main`), não da
+      # `development`. Esta regra só passa a valer no release seguinte — até lá o #31
+      # continua reprovando, e `@dependabot recreate` não muda isso.
       - dependency-name: jest-environment-jsdom
         versions: [">=30.5.0"]
 
