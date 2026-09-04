@@ -26,6 +26,13 @@ async function signIn(page: Page) {
   await page.getByLabel("Email").fill(CREDENTIALS.email);
   await page.getByLabel("Password", { exact: true }).fill(CREDENTIALS.password);
   await page.getByRole("button", { name: "Sign in" }).click();
+
+  // A casa de quem é de uma company é `/tickets`: listar usuários exige ADMIN
+  // ou AGENT, e um REQUESTER mandado para lá caía num 403.
+  await expect(page).toHaveURL(/\/tickets$/);
+
+  // Esta suíte é sobre a fatia identity, então segue para a tela de usuários.
+  await page.getByRole("link", { name: "Users" }).first().click();
   await expect(page).toHaveURL(/\/users$/);
 }
 

@@ -59,7 +59,8 @@ async function signIn(
 }
 
 const PLATFORM_HOME = /\/platform\/companies$/;
-const COMPANY_HOME = /\/users$/;
+// A casa de quem é de uma company passou a ser os chamados.
+const COMPANY_HOME = /\/tickets$/;
 
 async function signOut(page: Page) {
   await page.getByRole("button", { name: "Account menu" }).click();

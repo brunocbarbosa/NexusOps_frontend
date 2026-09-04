@@ -3,6 +3,8 @@
  * (`documents/backend/USERS.md`, Part I).
  */
 
+import type { Page } from "@/lib/api/page";
+
 /**
  * Os papéis que alguma rota aceita **atribuir** — e o que alimenta todo
  * `<Select>` de papel, nos dois consoles.
@@ -73,18 +75,7 @@ export interface SessionUser {
   role: Role;
 }
 
-export interface PageMeta {
-  total: number;
-  page: number;
-  perPage: number;
-  /** Sempre >= 1, mesmo com `total: 0` — a UI renderiza "1 of 1" sem caso especial. */
-  totalPages: number;
-}
-
-export interface UsersPage {
-  data: User[];
-  meta: PageMeta;
-}
+export type UsersPage = Page<User>;
 
 export interface UsersQuery {
   page: number;

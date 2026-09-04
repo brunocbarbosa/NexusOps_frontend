@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Building2Icon,
   KeyRoundIcon,
+  TicketIcon,
   UsersIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -36,6 +37,15 @@ const NAV: readonly NavItem[] = [
     label: "Companies",
     icon: Building2Icon,
     roles: ["ADMIN_MASTER"],
+  },
+  // Os três papéis de company têm chamados — o que muda é quais. O operador
+  // não: ele não pertence a company nenhuma, e a tabela de visibilidade do
+  // backend diz "nothing" para ele.
+  {
+    href: "/tickets",
+    label: "Tickets",
+    icon: TicketIcon,
+    roles: ["ADMIN", "AGENT", "REQUESTER"],
   },
   // Listar usuários é ADMIN ou AGENT; um REQUESTER receberia 403, então o item
   // nem aparece para ele. O operador também não entra aqui — ele chega aos

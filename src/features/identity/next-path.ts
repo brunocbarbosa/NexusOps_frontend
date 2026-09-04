@@ -23,7 +23,7 @@ export function safeNextPath(value: string | null | undefined): string {
 }
 
 const PLATFORM_HOME = "/platform/companies";
-const COMPANY_HOME = "/users";
+const COMPANY_HOME = "/tickets";
 const PLATFORM_PREFIX = "/platform";
 
 /**
@@ -38,6 +38,10 @@ const PLATFORM_PREFIX = "/platform";
  *
  * O papel vem da resposta do login, que o carrega. Não do JWT: a UI nunca o
  * decodifica.
+ *
+ * A casa de quem é de uma company é `/tickets`, e não `/users`: listar usuários
+ * exige ADMIN ou AGENT, então um `REQUESTER` mandado para lá caía num 403 na
+ * primeira tela que via. Chamados os três papéis têm.
  */
 export function landingPath(role: Role, next: string | null | undefined): string {
   const safe = safeNextPath(next);
