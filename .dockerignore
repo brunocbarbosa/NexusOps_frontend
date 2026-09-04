@@ -19,7 +19,11 @@ documents
 e2e
 playwright.config.ts
 jest.config.ts
-commitlint.config.mjs
+# `commitlint.config.*` cobre a config e o teste dela. O teste é um .ts na raiz,
+# então o `next build` dentro da imagem tenta tipá-lo — e o import da config,
+# que não entra aqui, quebra o build com TS2307. Foi o que reprovou o Release
+# do PR #34.
+commitlint.config.*
 *.md
 !README.md
 .env*
