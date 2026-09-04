@@ -1,4 +1,4 @@
-# Roteiro de teste manual — `identity` e `platform`
+# Roteiro de teste manual — `identity`, `platform` e `helpdesk`
 
 O que abrir, com que conta, e o que observar em cada tela. As contas abaixo vivem no **banco de
 desenvolvimento** do backend; um `prisma:reset` leva as de company embora, e a seção
@@ -6,8 +6,9 @@ desenvolvimento** do backend; um `prisma:reset` leva as de company embora, e a s
 semeado do `.env` a cada boot e volta sozinho.
 
 O desenho por trás do que este roteiro exercita está em
-[`specs/2026-08-23-identity-login-users-design.md`](./specs/2026-08-23-identity-login-users-design.md)
-e [`specs/2026-08-25-platform-operator-console-design.md`](./specs/2026-08-25-platform-operator-console-design.md).
+[`specs/2026-08-23-identity-login-users-design.md`](./specs/2026-08-23-identity-login-users-design.md),
+[`specs/2026-08-25-platform-operator-console-design.md`](./specs/2026-08-25-platform-operator-console-design.md)
+e [`specs/2026-09-01-helpdesk-core-design.md`](./specs/2026-09-01-helpdesk-core-design.md).
 
 > **`POST /auth/register` não existe mais.** Responde 404, inclusive com token válido. Companies
 > nascem pelo console do operador — é a mudança que quebrou a versão anterior deste roteiro.
@@ -155,6 +156,88 @@ Apague **só** o cookie `nexusops_at` (DevTools → Cookies → botão direito �
 recarregue. Nada acontece na tela: o servidor renova a sessão sozinho e o valor de `nexusops_rt`
 muda. Um refresh token reapresentado revogaria todas as suas sessões, então essa renovação é
 serializada de propósito — ver §3.2 da spec.
+
+## O helpdesk
+
+Depois do login, qualquer conta de company cai em **`/tickets`** — não mais em `/users`. A mudança
+não é estética: listar usuários exige ADMIN ou AGENT, e um `REQUESTER` mandado para lá caía num 403
+na primeira tela que via.
+
+### Visibilidade: a mesma URL, respostas diferentes
+
+1. Entre como `requester@acme.com` e abra um chamado. Anote a URL.
+2. Saia, entre como outro requester e cole aquela URL.
+
+O esperado é **"Ticket not found"**, com um link de volta para a lista — não um alerta vermelho. É a
+regra de visibilidade, não uma falha: um `REQUESTER` só enxerga o que abriu, e o backend responde
+404 (nunca 403) para não confirmar que o id existe em algum lugar.
+
+Entre como `agent@acme.com` e abra a mesma URL: 200. Repare também que o rodapé da lista mostra
+totais diferentes para as duas contas — `meta.total` respeita visibilidade.
+
+### O ciclo de vida, e a transição que não existe
+
+Como agente, no chamado: **Start work** → **Resolve** → **Close**. Depois de *Resolve*, os únicos
+botões são *Close* e *Reopen* — **não** existe "Start work". O backend recusaria
+`RESOLVED → IN_PROGRESS` com 409, e um botão que sempre falha é pior que nenhum.
+
+Para ver a recusa de verdade, force pelo `curl`:
+
+```bash
+curl -s -X PATCH http://localhost:3333/tickets/<id>/status -H "authorization: Bearer $TOKEN" \
+  -H 'content-type: application/json' -d '{"status":"IN_PROGRESS","version":<v>}'
+```
+
+Depois de fechar, o compositor de comentário some com uma explicação e a thread continua legível —
+frozen, não hidden.
+
+### O 409 de concorrência — o mais importante desta fatia
+
+Duas janelas anônimas, as duas logadas (podem ser a mesma conta), as duas no **mesmo chamado**.
+
+1. Na janela A, *Edit* → mude a descrição → *Save*.
+2. Na janela B, que ainda está na versão anterior, *Edit* → mude a descrição → *Save*.
+
+O esperado em B:
+
+- um **diálogo**, não um alerta: "Someone else changed this ticket";
+- a frase dizendo de qual versão para qual — a versão atual vem na mensagem do backend;
+- os **dois lados** lado a lado: o que está no servidor e o que você tentou salvar;
+- **Reapply mine** salva com a versão nova sem que ninguém a digite, e **Keep theirs** descarta.
+
+Confira no DevTools → Network que **exatamente um** `PATCH` saiu quando o diálogo abriu. Repetir a
+requisição com a mesma versão só produziria outro 409, e nada na tela faz isso.
+
+Recarregue a janela A: ela vê o que B reaplicou.
+
+### A nota interna
+
+Como agente, escreva um comentário com **Internal note** ligado. Depois entre como o requester do
+chamado: a nota não aparece **nem na thread nem na linha do tempo**, e o `total` da thread também
+não a conta — um total que contasse o que ele não pode ler anunciaria que algo está escondido.
+
+O switch nem aparece para um `REQUESTER`: ele receberia 403.
+
+### A lista longa
+
+Abra uns 60 chamados (o `for` do [Semear do zero](#semear-do-zero) serve de modelo) e role a lista.
+Duas coisas a observar:
+
+- as páginas se acumulam sozinhas ao chegar ao fim, e **não há** Previous/Next;
+- no DevTools → Elements, o container mantém ~20 linhas no DOM enquanto o total no rodapé continua
+  sendo o do servidor.
+
+Não há cabeçalho clicável para ordenar, e isso é de propósito: a API não aceita parâmetro de
+ordenação, e um cabeçalho ordenável ordenaria só o que já foi carregado.
+
+### As três suposições a confirmar
+
+Estas ainda não foram medidas contra a API real. Estão na §4 da spec, e é aqui que se resolvem:
+
+- [ ] `PATCH /tickets/:id/status` exige `version`? (O frontend envia.)
+- [ ] `PATCH /tickets/:id/assignee` exige `version`?
+- [ ] As transições legais são `OPEN → IN_PROGRESS | RESOLVED`, `IN_PROGRESS → RESOLVED | OPEN`,
+      `RESOLVED → CLOSED | OPEN`, `CLOSED` terminal — e cada recusa vem como 409?
 
 ## Semear do zero
 

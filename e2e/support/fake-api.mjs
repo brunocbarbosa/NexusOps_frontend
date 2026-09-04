@@ -47,6 +47,11 @@ const ACME = {
 
 let companies = [];
 let users = [];
+let tickets = [];
+let comments = [];
+let auditLogs = [];
+/** Um contador por company: `tickets.number` recomeça em 1 em cada uma. */
+let ticketCounters = new Map();
 let nextId = 0;
 let issued = 0;
 
@@ -93,7 +98,30 @@ function reset() {
       createdAt: "2026-08-22T10:00:00.000Z",
       deletedAt: "2026-08-23T10:00:00.000Z",
     },
+    // Dois requesters ativos, e os dois são necessários: a regra de
+    // visibilidade só é testável com um colega de sala para não enxergar o
+    // chamado do outro.
+    {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      email: "req@acme.com",
+      role: "REQUESTER",
+      companyId: ACME.id,
+      createdAt: "2026-08-24T10:00:00.000Z",
+      deletedAt: null,
+    },
+    {
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      email: "other@acme.com",
+      role: "REQUESTER",
+      companyId: ACME.id,
+      createdAt: "2026-08-25T10:00:00.000Z",
+      deletedAt: null,
+    },
   ];
+  tickets = [];
+  comments = [];
+  auditLogs = [];
+  ticketCounters = new Map([[ACME.id, 0]]);
 }
 
 reset();
@@ -285,6 +313,386 @@ function mutateUser(response, method, userId, restore, body, companyId, caller) 
   }
 
   return fail(response, 404, `Cannot ${method}`, "Not Found");
+}
+
+
+// --- helpdesk ---------------------------------------------------------------
+
+/**
+ * Quem enxerga qual chamado. É a regra que faz a mesma URL responder 200 para
+ * um agente e **404** para o colega de sala do requester — e não 403, que
+ * confirmaria que o id existe em algum lugar.
+ */
+function visibleTickets(caller) {
+  return tickets.filter(
+    (ticket) =>
+      ticket.companyId === caller.companyId &&
+      (isStaff(caller) || ticket.requesterId === caller.id),
+  );
+}
+
+function isStaff(caller) {
+  return caller.role === "ADMIN" || caller.role === "AGENT";
+}
+
+function userById(id) {
+  const found = users.find((candidate) => candidate.id === id);
+
+  return found ? publicUser(found) : null;
+}
+
+/** `TicketResponse`: as três pessoas vêm embutidas, `companyId` nunca sai. */
+function publicTicket(ticket) {
+  return {
+    id: ticket.id,
+    number: ticket.number,
+    title: ticket.title,
+    description: ticket.description,
+    status: ticket.status,
+    priority: ticket.priority,
+    category: ticket.category,
+    version: ticket.version,
+    requester: userById(ticket.requesterId),
+    assignee: ticket.assigneeId ? userById(ticket.assigneeId) : null,
+    closedBy: ticket.closedById ? userById(ticket.closedById) : null,
+    resolvedAt: ticket.resolvedAt,
+    closedAt: ticket.closedAt,
+    createdAt: ticket.createdAt,
+    updatedAt: ticket.updatedAt,
+  };
+}
+
+function publicComment(comment) {
+  return {
+    id: comment.id,
+    ticketId: comment.ticketId,
+    body: comment.body,
+    isInternal: comment.isInternal,
+    author: userById(comment.authorId),
+    createdAt: comment.createdAt,
+  };
+}
+
+function publicAudit(entry) {
+  return {
+    id: entry.id,
+    entityType: "Ticket",
+    entityId: entry.entityId,
+    action: entry.action,
+    oldValues: entry.oldValues,
+    newValues: entry.newValues,
+    user: entry.userId ? userById(entry.userId) : null,
+    createdAt: entry.createdAt,
+  };
+}
+
+let clock = 0;
+
+/** Instantes crescentes e distintos, para que a ordenação seja determinística. */
+function now() {
+  clock += 1;
+
+  return new Date(Date.UTC(2026, 8, 1, 9, 0, clock)).toISOString();
+}
+
+function record(ticket, caller, action, oldValues, newValues) {
+  nextId += 1;
+  auditLogs.push({
+    id: `audit-${nextId}`,
+    entityId: ticket.id,
+    action,
+    oldValues,
+    newValues,
+    userId: caller.id,
+    createdAt: now(),
+  });
+}
+
+/**
+ * O conflito de versão, com a versão atual **na mensagem** — é dela que a tela
+ * tira o "você estava na 3, ele está na 4". Um 409 genérico faria o teste do
+ * diálogo verificar que um modal abre, e não que o conflito foi resolvido.
+ */
+function versionRefused(response, ticket, version) {
+  if (version === ticket.version) {
+    return false;
+  }
+
+  fail(
+    response,
+    409,
+    `This ticket was changed by someone else (it is now at version ${ticket.version}). Reload it and reapply your change.`,
+    "Conflict",
+  );
+
+  return true;
+}
+
+const TRANSITIONS = {
+  OPEN: ["IN_PROGRESS", "RESOLVED"],
+  IN_PROGRESS: ["RESOLVED", "OPEN"],
+  RESOLVED: ["CLOSED", "OPEN"],
+  CLOSED: [],
+};
+
+function handleTickets(response, method, pathname, url, body, caller) {
+  if (pathname === "/tickets" && method === "GET") {
+    const status = url.searchParams.get("status");
+    const priority = url.searchParams.get("priority");
+    const category = url.searchParams.get("category");
+    const assigneeId = url.searchParams.get("assigneeId");
+    const unassigned = url.searchParams.get("unassigned");
+    const search = (url.searchParams.get("search") ?? "").toLowerCase();
+
+    if (assigneeId && unassigned) {
+      return fail(
+        response,
+        400,
+        "unassigned and assigneeId contradict each other. Send one or the other.",
+        "Bad Request",
+      );
+    }
+
+    const matching = visibleTickets(caller)
+      .filter(
+        (ticket) =>
+          (!status || ticket.status === status) &&
+          (!priority || ticket.priority === priority) &&
+          (!category || ticket.category === category) &&
+          (!assigneeId || ticket.assigneeId === assigneeId) &&
+          (unassigned !== "true" || ticket.assigneeId === null) &&
+          (!search ||
+            ticket.title.toLowerCase().includes(search) ||
+            (ticket.description ?? "").toLowerCase().includes(search)),
+      )
+      // Do mais novo para o mais antigo, sempre. Não há parâmetro de ordenação.
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+
+    const page = paginate(matching, url);
+
+    return send(response, 200, { ...page, data: page.data.map(publicTicket) });
+  }
+
+  if (pathname === "/tickets" && method === "POST") {
+    const last = ticketCounters.get(caller.companyId) ?? 0;
+    ticketCounters.set(caller.companyId, last + 1);
+
+    nextId += 1;
+    const ticket = {
+      id: `ticket-${nextId}`,
+      number: last + 1,
+      companyId: caller.companyId,
+      // O requester é sempre quem chama: não há como abrir em nome de outro.
+      requesterId: caller.id,
+      assigneeId: null,
+      closedById: null,
+      title: body.title,
+      description: body.description ?? null,
+      status: "OPEN",
+      priority: body.priority ?? "MEDIUM",
+      category: body.category ?? "OTHER",
+      version: 1,
+      resolvedAt: null,
+      closedAt: null,
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    tickets.push(ticket);
+    record(ticket, caller, "created", {}, {
+      number: ticket.number,
+      title: ticket.title,
+      status: ticket.status,
+      priority: ticket.priority,
+      category: ticket.category,
+    });
+
+    return send(response, 201, publicTicket(ticket));
+  }
+
+  const match = /^\/tickets\/([^/]+)(?:\/(status|assignee|comments|timeline))?$/.exec(
+    pathname,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const [, id, sub] = match;
+  const ticket = visibleTickets(caller).find((candidate) => candidate.id === id);
+
+  // 404 antes de qualquer outra coisa, inclusive para a thread e a timeline:
+  // elas não são um canal lateral para os chamados que a listagem esconde.
+  if (!ticket) {
+    return fail(response, 404, `No ticket ${id}`, "Not Found");
+  }
+
+  if (!sub && method === "GET") {
+    return send(response, 200, publicTicket(ticket));
+  }
+
+  if (!sub && method === "PATCH") {
+    if (ticket.status === "CLOSED") {
+      return fail(response, 409, "A closed ticket cannot be edited", "Conflict");
+    }
+    if (versionRefused(response, ticket, body.version)) return undefined;
+
+    const moved = {};
+    const before = {};
+    for (const field of ["title", "description", "priority", "category"]) {
+      if (body[field] !== undefined && body[field] !== ticket[field]) {
+        before[field] = ticket[field];
+        moved[field] = body[field];
+        ticket[field] = body[field];
+      }
+    }
+
+    ticket.version += 1;
+    ticket.updatedAt = now();
+    if (Object.keys(moved).length > 0) {
+      record(ticket, caller, "updated", before, moved);
+    }
+
+    return send(response, 200, publicTicket(ticket));
+  }
+
+  if (sub === "status" && method === "PATCH") {
+    if (!isStaff(caller)) {
+      return fail(response, 403, "This route requires one of: ADMIN, AGENT", "Forbidden");
+    }
+    if (versionRefused(response, ticket, body.version)) return undefined;
+
+    if (!TRANSITIONS[ticket.status].includes(body.status)) {
+      return fail(
+        response,
+        409,
+        `A ticket cannot go from ${ticket.status} to ${body.status}`,
+        "Conflict",
+      );
+    }
+
+    const from = ticket.status;
+    ticket.status = body.status;
+    if (body.status === "RESOLVED") ticket.resolvedAt = now();
+    // Reabrir descarta a alegação de resolvido; fechar a **mantém**.
+    if (body.status === "OPEN") ticket.resolvedAt = null;
+    if (body.status === "CLOSED") {
+      ticket.closedAt = now();
+      ticket.closedById = caller.id;
+    }
+    ticket.version += 1;
+    ticket.updatedAt = now();
+    record(ticket, caller, "status_changed", { status: from }, { status: ticket.status });
+
+    return send(response, 200, publicTicket(ticket));
+  }
+
+  if (sub === "assignee" && method === "PATCH") {
+    if (!isStaff(caller)) {
+      return fail(response, 403, "This route requires one of: ADMIN, AGENT", "Forbidden");
+    }
+    if (versionRefused(response, ticket, body.version)) return undefined;
+
+    const target = body.assigneeId ? userById(body.assigneeId) : null;
+
+    if (body.assigneeId && (!target || target.role === "REQUESTER")) {
+      return fail(
+        response,
+        409,
+        `${target ? target.email : body.assigneeId} is a REQUESTER and cannot be assigned a ticket. Only an AGENT or an ADMIN works tickets.`,
+        "Conflict",
+      );
+    }
+
+    const from = ticket.assigneeId;
+    ticket.assigneeId = body.assigneeId ?? null;
+    ticket.version += 1;
+    ticket.updatedAt = now();
+    record(
+      ticket,
+      caller,
+      "assigned",
+      { assigneeId: from },
+      { assigneeId: ticket.assigneeId },
+    );
+
+    return send(response, 200, publicTicket(ticket));
+  }
+
+  if (sub === "comments" && method === "POST") {
+    if (ticket.status === "CLOSED") {
+      return fail(response, 409, "A closed ticket takes no new comments", "Conflict");
+    }
+
+    if (body.isInternal === true && !isStaff(caller)) {
+      // 403 e não 404: o chamado é dele e está visível; falta só o papel.
+      return fail(
+        response,
+        403,
+        "Only an ADMIN or an AGENT can leave an internal note",
+        "Forbidden",
+      );
+    }
+
+    nextId += 1;
+    const comment = {
+      id: `comment-${nextId}`,
+      ticketId: ticket.id,
+      authorId: caller.id,
+      body: body.body,
+      isInternal: body.isInternal === true,
+      createdAt: now(),
+    };
+    comments.push(comment);
+    record(
+      ticket,
+      caller,
+      comment.isInternal ? "internal_note_added" : "commented",
+      null,
+      { commentId: comment.id },
+    );
+
+    return send(response, 201, publicComment(comment));
+  }
+
+  if (sub === "comments" && method === "GET") {
+    // A nota interna some da página **e do total** para um requester: um total
+    // que contasse o que ele não pode ler anunciaria que algo está escondido.
+    const thread = comments
+      .filter(
+        (comment) =>
+          comment.ticketId === ticket.id && (isStaff(caller) || !comment.isInternal),
+      )
+      .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+
+    const page = paginate(thread, url);
+
+    return send(response, 200, { ...page, data: page.data.map(publicComment) });
+  }
+
+  if (sub === "timeline" && method === "GET") {
+    const internalComments = new Set(
+      comments.filter((comment) => comment.isInternal).map((comment) => comment.id),
+    );
+
+    const trail = auditLogs
+      .filter(
+        (entry) =>
+          entry.entityId === ticket.id &&
+          (isStaff(caller) || entry.action !== "internal_note_added"),
+      )
+      .filter(
+        (entry) =>
+          isStaff(caller) || !internalComments.has(entry.newValues?.commentId),
+      )
+      // A timeline lê do mais antigo para o mais novo, ao contrário da lista.
+      .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+
+    const page = paginate(trail, url);
+
+    return send(response, 200, { ...page, data: page.data.map(publicAudit) });
+  }
+
+  return fail(response, 404, `Cannot ${method} ${pathname}`, "Not Found");
 }
 
 const server = createServer((request, response) => {
@@ -519,6 +927,16 @@ const server = createServer((request, response) => {
 
       if (nested && userId) {
         return mutateUser(response, method, userId, restore, body, company.id, caller);
+      }
+    }
+
+    // --- helpdesk ------------------------------------------------------------
+
+    if (pathname === "/tickets" || pathname.startsWith("/tickets/")) {
+      const handled = handleTickets(response, method, pathname, url, body, caller);
+
+      if (handled !== null) {
+        return handled;
       }
     }
 

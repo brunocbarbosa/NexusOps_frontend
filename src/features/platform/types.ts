@@ -7,7 +7,7 @@
  * de multi-tenancy.
  */
 
-import type { PageMeta } from "../identity/types";
+import type { Page } from "@/lib/api/page";
 
 /** `CompanyResponse` — o que toda rota que devolve uma company devolve. */
 export interface Company {
@@ -20,10 +20,7 @@ export interface Company {
   createdAt: string;
 }
 
-export interface CompaniesPage {
-  data: Company[];
-  meta: PageMeta;
-}
+export type CompaniesPage = Page<Company>;
 
 export interface CompaniesQuery {
   page: number;
